@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { usePlayer } from '@/contexts/PlayerContext';
 import { useTema } from '@/contexts/TemaContext';
@@ -11,6 +12,7 @@ const ALTURA_DA_BARRA_DE_ABAS = 56;
 export function MiniPlayer() {
   const { faixaAtual, estaTocando, alternarReproducao } = usePlayer();
   const { cores } = useTema();
+  const insets = useSafeAreaInsets();
   const router = useRouter();
 
   if (!faixaAtual) return null;
@@ -18,7 +20,10 @@ export function MiniPlayer() {
   return (
     <Pressable
       onPress={() => router.push('/player')}
-      style={[estilos.container, { backgroundColor: cores.superficieElevada, bottom: ALTURA_DA_BARRA_DE_ABAS }]}
+      style={[
+        estilos.container,
+        { backgroundColor: cores.superficieElevada, bottom: ALTURA_DA_BARRA_DE_ABAS + insets.bottom },
+      ]}
     >
       <Image source={{ uri: faixaAtual.capaUrl }} style={estilos.capa} contentFit="cover" />
       <View style={estilos.informacoes}>
