@@ -22,12 +22,14 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [progressoEmSegundos, setProgressoEmSegundos] = useState(0);
 
   function mudarFaixaNaFila(deslocamento: number) {
-    if (!faixaAtual) return;
-    const indiceAtual = filaDeFaixas.findIndex((item) => item.id === faixaAtual.id);
-    const proximoIndice = indiceAtual + deslocamento;
-    if (proximoIndice < 0 || proximoIndice >= filaDeFaixas.length) return;
-    setFaixaAtual(filaDeFaixas[proximoIndice]);
-    setProgressoEmSegundos(0);
+    setFaixaAtual((atual) => {
+      if (!atual) return atual;
+      const indiceAtual = filaDeFaixas.findIndex((item) => item.id === atual.id);
+      const proximoIndice = indiceAtual + deslocamento;
+      if (proximoIndice < 0 || proximoIndice >= filaDeFaixas.length) return atual;
+      setProgressoEmSegundos(0);
+      return filaDeFaixas[proximoIndice];
+    });
   }
 
   useEffect(() => {
@@ -45,7 +47,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
     return () => clearInterval(intervalo);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [estaTocando, faixaAtual]);
+  }, [estaTocando, faixaAtual, filaDeFaixas]);
 
   function tocarFaixa(faixa: Faixa, fila: Faixa[] = [faixa]) {
     setFaixaAtual(faixa);
