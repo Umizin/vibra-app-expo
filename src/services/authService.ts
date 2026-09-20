@@ -1,8 +1,7 @@
-import * as SecureStore from 'expo-secure-store';
-
 import { Usuario } from '@/types/modelos';
 import { paraBase64 } from '@/utils/base64';
 import { simularRequisicao } from './api';
+import { armazenamentoSeguro } from './armazenamentoSeguro';
 
 const CHAVE_TOKEN = 'vibra.tokenDeAcesso';
 const CHAVE_USUARIO = 'vibra.usuarioLogado';
@@ -35,20 +34,20 @@ async function entrar(email: string, senha: string): Promise<Usuario> {
   await simularRequisicao(usuario, 600);
 
   const token = criarTokenDeAcesso(usuario);
-  await SecureStore.setItemAsync(CHAVE_TOKEN, token);
-  await SecureStore.setItemAsync(CHAVE_USUARIO, JSON.stringify(usuario));
+  await armazenamentoSeguro.salvar(CHAVE_TOKEN, token);
+  await armazenamentoSeguro.salvar(CHAVE_USUARIO, JSON.stringify(usuario));
 
   return usuario;
 }
 
 async function sair(): Promise<void> {
-  await SecureStore.deleteItemAsync(CHAVE_TOKEN);
-  await SecureStore.deleteItemAsync(CHAVE_USUARIO);
+  await armazenamentoSeguro.remover(CHAVE_TOKEN);
+  await armazenamentoSeguro.remover(CHAVE_USUARIO);
 }
 
 async function recuperarSessao(): Promise<Usuario | null> {
-  const token = await SecureStore.getItemAsync(CHAVE_TOKEN);
-  const usuarioSalvo = await SecureStore.getItemAsync(CHAVE_USUARIO);
+  const token = await armazenamentoSeguro.ler(CHAVE_TOKEN);
+  const usuarioSalvo = await armazenamentoSeguro.ler(CHAVE_USUARIO);
 
   if (!token || !usuarioSalvo) return null;
 
