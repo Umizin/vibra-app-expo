@@ -57,7 +57,9 @@ export default function TelaDeLogin() {
         ehSenha
       />
 
-      {mensagemDeErro ? <Text style={estilos.erro}>{mensagemDeErro}</Text> : null}
+      {mensagemDeErro ? (
+        <Text style={[estilos.erro, { color: cores.perigo }]}>{mensagemDeErro}</Text>
+      ) : null}
 
       <BotaoPrimario
         titulo="Entrar"
@@ -77,6 +79,6 @@ const estilos = StyleSheet.create({
   container: { flex: 1, justifyContent: 'center', paddingHorizontal: 24, gap: 16 },
   marca: { fontSize: 40, fontWeight: '800', textAlign: 'center', marginBottom: 4 },
   subtitulo: { fontSize: 15, textAlign: 'center', marginBottom: 24 },
-  erro: { color: '#F15E6C', fontSize: 13 },
+  erro: { fontSize: 13 },
   dica: { fontSize: 12, textAlign: 'center', marginTop: 24 },
 });

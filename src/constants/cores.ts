@@ -6,6 +6,7 @@ export const paletaEscura = {
   textoSecundario: '#B3B3B3',
   destaque: '#1DB954',
   borda: '#2A2A2A',
+  perigo: '#F15E6C',
 };
 
 export const paletaClara = {
@@ -16,6 +17,7 @@ export const paletaClara = {
   textoSecundario: '#5E5E5E',
   destaque: '#1DB954',
   borda: '#DDDDDD',
+  perigo: '#D93A4A',
 };
 
 export type Paleta = typeof paletaEscura;
