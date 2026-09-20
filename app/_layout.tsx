@@ -24,6 +24,7 @@ function PilhaDeNavegacao() {
       <Stack.Screen name="index" />
       <Stack.Screen name="login" />
       <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="playlist/[id]" />
       <Stack.Screen name="favoritas" />
       <Stack.Screen name="player" options={{ presentation: 'modal' }} />
     </Stack>
