@@ -14,11 +14,23 @@ export function useRequisicao<T>(tarefa: () => Promise<T>, dependencias: unknown
   });
 
   useEffect(() => {
+    let cancelada = false;
     setEstado((atual) => ({ ...atual, carregando: true, erro: null }));
 
     tarefa()
-      .then((resultado) => setEstado({ dado: resultado, carregando: false, erro: null }))
-      .catch(() => setEstado({ dado: null, carregando: false, erro: 'Não foi possível carregar os dados.' }));
+      .then((resultado) => {
+        if (!cancelada) setEstado({ dado: resultado, carregando: false, erro: null });
+      })
+      .catch(() => {
+        if (!cancelada) {
+          setEstado({ dado: null, carregando: false, erro: 'Não foi possível carregar os dados.' });
+        }
+      });
+
+    return () => {
+      cancelada = true;
+    };
+    // a tarefa é recriada a cada render; o controle de quando buscar de novo é feito pelas dependências
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, dependencias);
 
