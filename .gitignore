@@ -30,6 +30,13 @@ yarn-error.*
 
 # local env files
 .env*.local
+.env
+.env.*
+!.env.example
+
+# backend build artifacts
+/vibra-api/node_modules/
+/vibra-api/dist/
 
 # typescript
 *.tsbuildinfo
