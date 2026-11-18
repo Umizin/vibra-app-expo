@@ -6,3 +6,58 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+model User {
+  id           String     @id @default(uuid()) @db.Uuid
+  email        String     @unique @db.VarChar(254)
+  displayName  String     @map("display_name") @db.VarChar(80)
+  passwordHash String     @map("password_hash") @db.VarChar(255)
+  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  playlists    Playlist[]
+  favorites    Favorite[]
+
+  @@map("users")
+}
+
+model Playlist {
+  id          String         @id @default(uuid()) @db.Uuid
+  ownerId     String         @map("owner_id") @db.Uuid
+  name        String         @db.VarChar(100)
+  description String?        @db.VarChar(500)
+  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  owner       User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  tracks      PlaylistTrack[]
+
+  @@index([ownerId, updatedAt(sort: Desc)])
+  @@map("playlists")
+}
+
+model PlaylistTrack {
+  id             String   @id @default(uuid()) @db.Uuid
+  playlistId     String   @map("playlist_id") @db.Uuid
+  jamendoTrackId String   @map("jamendo_track_id") @db.VarChar(64)
+  position       Int
+  addedAt        DateTime @default(now()) @map("added_at") @db.Timestamptz(3)
+
+  playlist       Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+
+  @@unique([playlistId, jamendoTrackId])
+  @@unique([playlistId, position])
+  @@map("playlist_tracks")
+}
+
+model Favorite {
+  userId         String   @map("user_id") @db.Uuid
+  jamendoTrackId String   @map("jamendo_track_id") @db.VarChar(64)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, jamendoTrackId])
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("favorites")
+}
