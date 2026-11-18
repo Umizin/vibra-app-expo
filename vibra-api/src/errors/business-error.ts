@@ -7,6 +7,8 @@ export type BusinessErrorCode =
   | 'PLAYLIST_POSITION_IN_USE'
   | 'FAVORITE_ALREADY_EXISTS'
   | 'FAVORITE_NOT_FOUND'
+  | 'INVALID_EMAIL'
+  | 'INVALID_DISPLAY_NAME'
   | 'INVALID_UPDATE';
 
 export class BusinessError extends Error {

@@ -4,9 +4,9 @@ import type { AddPlaylistTrackRepositoryInput } from '../repositories/playlist-t
 import { playlistTrackRepository } from '../repositories/playlist-track.repository.js';
 import { playlistRepository } from '../repositories/playlist.repository.js';
 
-async function ensurePlaylistOwner(playlistId: string, ownerId: string): Promise<void> {
-  const playlist = await playlistRepository.findByIdAndOwner(playlistId, ownerId);
-  if (!playlist) throw new BusinessError('PLAYLIST_NOT_FOUND', 'Playlist não encontrada.');
+function hasTargetIdentifier(target: string[], identifier: string): boolean {
+  const normalizedTarget = target.join('_').toLowerCase().replace(/[^a-z0-9]/g, '');
+  return normalizedTarget.includes(identifier.toLowerCase().replace(/[^a-z0-9]/g, ''));
 }
 
 export const playlistTrackService = {
@@ -17,11 +17,14 @@ export const playlistTrackService = {
       return track;
     } catch (error) {
       if (isPrismaErrorCode(error, 'P2002')) {
-        const target = uniqueConstraintTarget(error).join(' ');
-        if (target.includes('position')) {
+        const target = uniqueConstraintTarget(error);
+        if (hasTargetIdentifier(target, 'position')) {
           throw new BusinessError('PLAYLIST_POSITION_IN_USE', 'Esta posição já está ocupada na playlist.');
         }
-        throw new BusinessError('TRACK_ALREADY_IN_PLAYLIST', 'Esta faixa já está na playlist.');
+        if (hasTargetIdentifier(target, 'playlistId') && hasTargetIdentifier(target, 'jamendoTrackId')) {
+          throw new BusinessError('TRACK_ALREADY_IN_PLAYLIST', 'Esta faixa já está na playlist.');
+        }
+        throw error;
       }
       if (isPrismaErrorCode(error, 'P2003')) {
         throw new BusinessError('PLAYLIST_NOT_FOUND', 'Playlist não encontrada.');
@@ -37,15 +40,21 @@ export const playlistTrackService = {
   },
 
   async getByJamendoTrackId(playlistId: string, ownerId: string, jamendoTrackId: string) {
-    await ensurePlaylistOwner(playlistId, ownerId);
     const track = await playlistTrackRepository.findByJamendoTrackId(playlistId, ownerId, jamendoTrackId);
-    if (!track) throw new BusinessError('TRACK_NOT_FOUND', 'Faixa não encontrada na playlist.');
+    if (!track) {
+      const playlist = await playlistRepository.findByIdAndOwner(playlistId, ownerId);
+      if (!playlist) throw new BusinessError('PLAYLIST_NOT_FOUND', 'Playlist não encontrada.');
+      throw new BusinessError('TRACK_NOT_FOUND', 'Faixa não encontrada na playlist.');
+    }
     return track;
   },
 
   async remove(playlistId: string, ownerId: string, jamendoTrackId: string): Promise<void> {
-    await ensurePlaylistOwner(playlistId, ownerId);
     const removed = await playlistTrackRepository.remove(playlistId, ownerId, jamendoTrackId);
-    if (!removed) throw new BusinessError('TRACK_NOT_FOUND', 'Faixa não encontrada na playlist.');
+    if (!removed) {
+      const playlist = await playlistRepository.findByIdAndOwner(playlistId, ownerId);
+      if (!playlist) throw new BusinessError('PLAYLIST_NOT_FOUND', 'Playlist não encontrada.');
+      throw new BusinessError('TRACK_NOT_FOUND', 'Faixa não encontrada na playlist.');
+    }
   },
 };
