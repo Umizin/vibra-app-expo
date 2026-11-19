@@ -1,5 +1,6 @@
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 
+import { historicoService } from '@/services/historicoService';
 import { Faixa } from '@/types/modelos';
 
 type PlayerContextType = {
@@ -9,6 +10,8 @@ type PlayerContextType = {
   progressoEmSegundos: number;
   tocarFaixa: (faixa: Faixa, fila?: Faixa[]) => void;
   alternarReproducao: () => void;
+  pausar: () => void;
+  removerDaFila: (idDaFaixa: string) => void;
   irParaProxima: () => void;
   irParaAnterior: () => void;
 };
@@ -31,6 +34,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       return filaDeFaixas[proximoIndice];
     });
   }
+
+  useEffect(() => {
+    if (faixaAtual) historicoService.registrar(faixaAtual).catch(() => undefined);
+  }, [faixaAtual]);
 
   useEffect(() => {
     if (!estaTocando || !faixaAtual) return;
@@ -61,6 +68,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     setEstaTocando((atual) => !atual);
   }
 
+  function removerDaFila(idDaFaixa: string) {
+    setFilaDeFaixas((atual) => atual.filter((faixa) => faixa.id !== idDaFaixa));
+  }
+
   return (
     <PlayerContext.Provider
       value={{
@@ -70,6 +81,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         progressoEmSegundos,
         tocarFaixa,
         alternarReproducao,
+        pausar: () => setEstaTocando(false),
+        removerDaFila,
         irParaProxima: () => mudarFaixaNaFila(1),
         irParaAnterior: () => mudarFaixaNaFila(-1),
       }}
