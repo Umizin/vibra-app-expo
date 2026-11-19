@@ -1,10 +1,15 @@
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { ActivityIndicator, ScrollView, StyleSheet, Text } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CartaoDeCapa } from '@/components/CartaoDeCapa';
 import { SecaoComTitulo } from '@/components/SecaoComTitulo';
+import { corSobreHumor, humores } from '@/constants/humores';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePlayer } from '@/contexts/PlayerContext';
+import { usePreferencias } from '@/contexts/PreferenciasContext';
 import { useTema } from '@/contexts/TemaContext';
 import { useRequisicao } from '@/hooks/useRequisicao';
 import { catalogoService } from '@/services/catalogoService';
@@ -24,6 +29,9 @@ export default function TelaInicial() {
 
   const playlists = useRequisicao(() => catalogoService.listarPlaylists(), []);
   const albuns = useRequisicao(() => catalogoService.listarAlbuns(), []);
+  const { generos } = usePreferencias();
+  const { tocarFaixa } = usePlayer();
+  const daVibe = useRequisicao(() => catalogoService.buscarPorGeneros(generos), [generos.join()]);
 
   return (
     <ScrollView
@@ -33,6 +41,34 @@ export default function TelaInicial() {
       <Text style={[estilos.saudacao, { color: cores.texto }]}>
         {saudacaoConformeHorario()}, {usuario?.nome}
       </Text>
+
+      <Pressable onPress={() => router.push('/radio')} style={estilos.banner}>
+        <LinearGradient colors={humores[3].cores} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={estilos.gradiente}>
+          <View style={{ flex: 1 }}>
+            <Text style={estilos.tituloBanner}>Rádio de Humor</Text>
+            <Text style={estilos.legendaBanner}>Uma estação para cada momento do seu dia</Text>
+          </View>
+          <Ionicons name="radio" size={36} color={corSobreHumor} />
+        </LinearGradient>
+      </Pressable>
+
+      {generos.length > 0 && (
+        <SecaoComTitulo titulo="Na sua vibe">
+          {daVibe.carregando ? (
+            <ActivityIndicator color={cores.destaque} />
+          ) : (
+            daVibe.dado?.map((faixa) => (
+              <CartaoDeCapa
+                key={faixa.id}
+                titulo={faixa.titulo}
+                subtitulo={`${faixa.artista} · ${faixa.genero}`}
+                capaUrl={faixa.capaUrl}
+                aoPressionar={() => tocarFaixa(faixa, daVibe.dado ?? [faixa])}
+              />
+            ))
+          )}
+        </SecaoComTitulo>
+      )}
 
       <SecaoComTitulo titulo="Feitas para você">
         {playlists.carregando ? (
@@ -71,4 +107,8 @@ export default function TelaInicial() {
 
 const estilos = StyleSheet.create({
   saudacao: { fontSize: 24, fontWeight: '800', paddingHorizontal: 16, marginBottom: 20 },
+  banner: { marginHorizontal: 16, marginBottom: 28 },
+  gradiente: { flexDirection: 'row', alignItems: 'center', borderRadius: 16, padding: 20, gap: 12 },
+  tituloBanner: { color: corSobreHumor, fontSize: 20, fontWeight: '900' },
+  legendaBanner: { color: corSobreHumor, opacity: 0.85, fontSize: 13, marginTop: 4 },
 });

@@ -34,6 +34,7 @@ function PilhaDeNavegacao() {
       <Stack.Screen name="fila" />
       <Stack.Screen name="timer" options={{ presentation: 'modal' }} />
       <Stack.Screen name="pulso" />
+      <Stack.Screen name="radio" />
     </Stack>
   );
 }
