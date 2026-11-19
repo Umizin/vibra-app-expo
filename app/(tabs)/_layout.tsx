@@ -4,14 +4,20 @@ import { View } from 'react-native';
 
 import { MiniPlayer } from '@/components/MiniPlayer';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePreferencias } from '@/contexts/PreferenciasContext';
 import { useTema } from '@/contexts/TemaContext';
 
 export default function LayoutDeAbas() {
   const { usuario } = useAuth();
+  const { onboardingFeito } = usePreferencias();
   const { cores } = useTema();
 
   if (!usuario) {
     return <Redirect href="/login" />;
+  }
+
+  if (!onboardingFeito) {
+    return <Redirect href="/onboarding" />;
   }
 
   return (

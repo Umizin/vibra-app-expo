@@ -1,11 +1,17 @@
+import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BotaoPrimario } from '@/components/BotaoPrimario';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTema } from '@/contexts/TemaContext';
+
+const atalhos = [
+  { titulo: 'Seu Pulso', rota: '/pulso' },
+  { titulo: 'Meus estilos', rota: '/onboarding?editar=1' },
+] as const;
 
 export default function TelaDePerfil() {
   const { usuario, sair } = useAuth();
@@ -32,6 +38,17 @@ export default function TelaDePerfil() {
           trackColor={{ true: cores.destaque, false: cores.borda }}
         />
       </View>
+
+      {atalhos.map((atalho) => (
+        <Pressable
+          key={atalho.titulo}
+          onPress={() => router.push(atalho.rota)}
+          style={[estilos.linhaConfig, { borderColor: cores.borda }]}
+        >
+          <Text style={[estilos.rotuloConfig, { color: cores.texto }]}>{atalho.titulo}</Text>
+          <Ionicons name="chevron-forward" size={18} color={cores.textoSecundario} />
+        </Pressable>
+      ))}
 
       <View style={estilos.rodape}>
         <BotaoPrimario titulo="Sair da conta" aoPressionar={lidarComSair} />
