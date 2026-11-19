@@ -1,6 +1,16 @@
+import { Genero } from '@/constants/generos';
 import { Album, Artista, Faixa, Playlist } from '@/types/modelos';
 
 const capa = (semente: string) => `https://picsum.photos/seed/${semente}/400/400`;
+
+const generoPorArtista: Record<string, Genero> = {
+  'Luiza Menezes': 'MPB',
+  'Coletivo Norte': 'Eletrônica',
+  'Rafa Duarte': 'Rock',
+  Bruma: 'Lo-fi',
+  'Pedro Quintas': 'Indie',
+  'Nina Alves': 'Pop',
+};
 
 const faixa = (
   id: string,
@@ -14,6 +24,7 @@ const faixa = (
   artista,
   duracaoEmSegundos,
   capaUrl: capa(capaSemente),
+  genero: generoPorArtista[artista],
 });
 
 export const artistas: Artista[] = [

@@ -1,3 +1,4 @@
+import { Genero } from '@/constants/generos';
 import { albuns, artistas, playlists, todasAsFaixas } from '@/data/catalogo';
 import { Artista, ColecaoDeFaixas, Faixa } from '@/types/modelos';
 import { simularRequisicao } from './api';
@@ -41,10 +42,16 @@ function buscarPorTermo(termo: string): Promise<Faixa[]> {
   return simularRequisicao(resultado, 250);
 }
 
+function buscarPorGeneros(generos: Genero[]): Promise<Faixa[]> {
+  const resultado = todasAsFaixas.filter((faixa) => generos.includes(faixa.genero));
+  return simularRequisicao(resultado, 250);
+}
+
 export const catalogoService = {
   listarPlaylists: () => simularRequisicao(playlists),
   listarAlbuns: () => simularRequisicao(albuns),
   listarArtistas: (): Promise<Artista[]> => simularRequisicao(artistas),
   buscarColecaoPorId,
   buscarPorTermo,
+  buscarPorGeneros,
 };

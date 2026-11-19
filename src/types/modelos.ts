@@ -1,3 +1,5 @@
+import { Genero } from '@/constants/generos';
+
 export type Usuario = {
   id: string;
   nome: string;
@@ -11,6 +13,12 @@ export type Faixa = {
   artista: string;
   duracaoEmSegundos: number;
   capaUrl: string;
+  genero: Genero;
+};
+
+export type Reproducao = {
+  faixa: Faixa;
+  tocadaEm: string;
 };
 
 export type Album = {
