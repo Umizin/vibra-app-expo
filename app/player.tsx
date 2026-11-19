@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFavoritos } from '@/contexts/FavoritosContext';
 import { usePlayer } from '@/contexts/PlayerContext';
 import { useTema } from '@/contexts/TemaContext';
+import { useTimer } from '@/contexts/TimerContext';
 import { formatarDuracao } from '@/utils/formatarDuracao';
 
 export default function TelaDoPlayer() {
@@ -17,6 +18,7 @@ export default function TelaDoPlayer() {
   const router = useRouter();
   const player = usePlayer();
   const { ehFavorita, alternarFavorito } = useFavoritos();
+  const { fimEm } = useTimer();
 
   useEffect(() => {
     if (!player.faixaAtual) {
@@ -81,6 +83,15 @@ export default function TelaDoPlayer() {
             <Ionicons name="play-skip-forward" size={32} color={cores.texto} />
           </Pressable>
         </View>
+
+        <View style={estilos.extras}>
+          <Pressable onPress={() => router.push('/timer')} hitSlop={12}>
+            <Ionicons name="moon" size={22} color={fimEm ? cores.destaque : cores.textoSecundario} />
+          </Pressable>
+          <Pressable onPress={() => router.push('/fila')} hitSlop={12}>
+            <Ionicons name="list" size={24} color={cores.textoSecundario} />
+          </Pressable>
+        </View>
       </View>
     </LinearGradient>
   );
@@ -98,5 +109,6 @@ const estilos = StyleSheet.create({
   linhaDeTempo: { flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginTop: 6 },
   tempo: { fontSize: 11 },
   controles: { flexDirection: 'row', alignItems: 'center', gap: 32, marginTop: 40 },
+  extras: { flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginTop: 40 },
   botaoPlay: { width: 68, height: 68, borderRadius: 34, alignItems: 'center', justifyContent: 'center' },
 });

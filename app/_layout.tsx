@@ -6,6 +6,7 @@ import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { FavoritosProvider } from '@/contexts/FavoritosContext';
 import { PlayerProvider } from '@/contexts/PlayerContext';
 import { TemaProvider, useTema } from '@/contexts/TemaContext';
+import { TimerProvider } from '@/contexts/TimerContext';
 
 function PilhaDeNavegacao() {
   const { carregandoSessao } = useAuth();
@@ -27,6 +28,9 @@ function PilhaDeNavegacao() {
       <Stack.Screen name="playlist/[id]" />
       <Stack.Screen name="favoritas" />
       <Stack.Screen name="player" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="fila" />
+      <Stack.Screen name="timer" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="pulso" />
     </Stack>
   );
 }
@@ -37,8 +41,10 @@ export default function LayoutRaiz() {
       <AuthProvider>
         <FavoritosProvider>
           <PlayerProvider>
-            <StatusBar style="light" />
-            <PilhaDeNavegacao />
+            <TimerProvider>
+              <StatusBar style="light" />
+              <PilhaDeNavegacao />
+            </TimerProvider>
           </PlayerProvider>
         </FavoritosProvider>
       </AuthProvider>
