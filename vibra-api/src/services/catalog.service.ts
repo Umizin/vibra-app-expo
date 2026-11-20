@@ -40,6 +40,12 @@ export type TrackSearchResult = {
   pagination: TrackPagination;
 };
 
+export type TrackBatchResult = {
+  data: TrackDto[];
+  requestedIds: string[];
+  missingIds: string[];
+};
+
 export type ArtistDto = {
   id: string;
   name: string;
@@ -176,6 +182,30 @@ export class CatalogService {
     const track = parsed.data.results[0];
     if (!track) throw new BusinessError('TRACK_NOT_FOUND', 'Faixa não encontrada.');
     return mapTrack(track);
+  }
+
+  async getTracksByIds(ids: string[]): Promise<TrackBatchResult> {
+    const envelope = await this.client.get('tracks', {
+      id: ids,
+      include: ['licenses', 'musicinfo'],
+      limit: ids.length,
+    });
+
+    const parsed = jamendoTrackEnvelopeSchema.safeParse(envelope);
+    if (!parsed.success) throw new JamendoResponseError(parsed.error);
+
+    const tracksById = new Map(parsed.data.results.map((track) => [track.id, mapTrack(track)]));
+    const data = ids.flatMap((id) => {
+      const track = tracksById.get(id);
+      return track ? [track] : [];
+    });
+    const foundIds = new Set(data.map((track) => track.id));
+
+    return {
+      data,
+      requestedIds: [...ids],
+      missingIds: ids.filter((id) => !foundIds.has(id)),
+    };
   }
 
   async searchArtists(query: CatalogArtistsQuery): Promise<ArtistSearchResult> {

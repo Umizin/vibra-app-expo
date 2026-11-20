@@ -63,6 +63,17 @@ test('monta GET HTTPS no host fixo, adiciona client_id e formato JSON', async ()
   assert.deepEqual(envelope.results[0], successfulPayload().results[0]);
 });
 
+test('serializa listas documentadas como valores separados por espaço', async () => {
+  let capturedUrl: URL | undefined;
+  const jamendo = client({ fetchImpl: async (input) => {
+    capturedUrl = new URL(String(input));
+    return new Response(JSON.stringify(successfulPayload()), { status: 200 });
+  } });
+
+  await jamendo.get('tracks', { id: ['12345', '67890'] });
+  assert.equal(capturedUrl?.searchParams.get('id'), '12345 67890');
+});
+
 test('não aceita recurso que tente substituir o host fixo', async () => {
   let fetchCalled = false;
   const jamendo = client({ fetchImpl: async () => {
