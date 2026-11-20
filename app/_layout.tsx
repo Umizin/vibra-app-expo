@@ -26,9 +26,12 @@ function PilhaDeNavegacao() {
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: cores.fundo } }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="login" />
+      <Stack.Screen name="cadastro" />
       <Stack.Screen name="onboarding" />
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="playlist/[id]" />
+      <Stack.Screen name="album/[id]" />
+      <Stack.Screen name="artista/[id]" />
       <Stack.Screen name="favoritas" />
       <Stack.Screen name="player" options={{ presentation: 'modal' }} />
       <Stack.Screen name="fila" />

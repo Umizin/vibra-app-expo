@@ -1,6 +1,6 @@
 import { Redirect, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, StyleSheet, Text } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text } from 'react-native';
 
 import { BotaoPrimario } from '@/components/BotaoPrimario';
 import { CampoDeTexto } from '@/components/CampoDeTexto';
@@ -13,7 +13,7 @@ export default function TelaDeLogin() {
   const [mensagemDeErro, setMensagemDeErro] = useState('');
   const [autenticando, setAutenticando] = useState(false);
 
-  const { usuario, entrar } = useAuth();
+  const { usuario, entrar, erroRecuperacaoSessao } = useAuth();
   const { cores } = useTema();
   const router = useRouter();
 
@@ -53,10 +53,13 @@ export default function TelaDeLogin() {
         rotulo="Senha"
         valor={senha}
         aoMudar={setSenha}
-        placeholder="Mínimo de 4 caracteres"
+        placeholder="Mínimo de 8 caracteres"
         ehSenha
       />
 
+      {erroRecuperacaoSessao ? (
+        <Text style={[estilos.erro, { color: cores.perigo }]}>{erroRecuperacaoSessao}</Text>
+      ) : null}
       {mensagemDeErro ? (
         <Text style={[estilos.erro, { color: cores.perigo }]}>{mensagemDeErro}</Text>
       ) : null}
@@ -68,9 +71,9 @@ export default function TelaDeLogin() {
         desabilitado={!email || !senha}
       />
 
-      <Text style={[estilos.dica, { color: cores.textoSecundario }]}>
-        Login simulado: use qualquer e-mail válido e senha com 4 ou mais caracteres.
-      </Text>
+      <Pressable onPress={() => router.push('/cadastro' as never)}>
+        <Text style={[estilos.dica, { color: cores.destaque }]}>Ainda não tem conta? Cadastre-se</Text>
+      </Pressable>
     </KeyboardAvoidingView>
   );
 }
@@ -80,5 +83,5 @@ const estilos = StyleSheet.create({
   marca: { fontSize: 40, fontWeight: '800', textAlign: 'center', marginBottom: 4 },
   subtitulo: { fontSize: 15, textAlign: 'center', marginBottom: 24 },
   erro: { fontSize: 13 },
-  dica: { fontSize: 12, textAlign: 'center', marginTop: 24 },
+  dica: { fontSize: 13, textAlign: 'center', marginTop: 24, fontWeight: '700' },
 });
