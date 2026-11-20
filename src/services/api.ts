@@ -96,9 +96,13 @@ export class VibraApiClient {
     return this.request<T>(path, { ...options, body, method: 'PATCH' });
   }
 
+  async delete<T = void>(path: string, options: RequestOptions = {}): Promise<T> {
+    return this.request<T>(path, { ...options, method: 'DELETE' });
+  }
+
   private async request<T>(
     path: string,
-    options: RequestOptions & { method: 'GET' | 'POST' | 'PATCH' },
+    options: RequestOptions & { method: 'GET' | 'POST' | 'PATCH' | 'DELETE' },
   ): Promise<T> {
     const baseUrl = configuredBaseUrl(this.baseUrlProvider);
     const url = new URL(path.replace(/^\/+/, ''), baseUrl);

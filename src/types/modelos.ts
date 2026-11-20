@@ -45,6 +45,38 @@ export type Playlist = {
   faixas: Faixa[];
 };
 
+/** Playlist persistida retornada pela API Vibra. Datas chegam como strings JSON. */
+export type PlaylistPersistida = {
+  id: string;
+  name: string;
+  description: string | null;
+  createdAt: string;
+  updatedAt: string;
+  trackCount: number;
+};
+
+/** Referência de faixa persistida na playlist; metadados vêm do catálogo. */
+export type PlaylistTrack = {
+  jamendoTrackId: string;
+  position: number;
+  addedAt: string;
+};
+
+export type CriarPlaylistInput = {
+  name: string;
+  description?: string;
+};
+
+export type AtualizarPlaylistInput = {
+  name?: string;
+  description?: string | null;
+};
+
+export type AdicionarFaixaPlaylistInput = {
+  jamendoTrackId: string;
+  position: number;
+};
+
 export type Artista = {
   id: string;
   nome: string;
