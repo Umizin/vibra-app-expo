@@ -26,7 +26,13 @@ export default function TelaDePerfil() {
 
   return (
     <View style={[estilos.container, { backgroundColor: cores.fundo, paddingTop: insets.top + 24 }]}>
-      <Image source={{ uri: usuario?.avatarUrl }} style={estilos.avatar} contentFit="cover" />
+      {usuario?.avatarUrl ? (
+        <Image source={{ uri: usuario.avatarUrl }} style={estilos.avatar} contentFit="cover" />
+      ) : (
+        <View style={[estilos.avatar, estilos.avatarVazio, { backgroundColor: cores.superficieElevada }]}>
+          <Ionicons name="person" size={42} color={cores.textoSecundario} />
+        </View>
+      )}
       <Text style={[estilos.nome, { color: cores.texto }]}>{usuario?.nome}</Text>
       <Text style={[estilos.email, { color: cores.textoSecundario }]}>{usuario?.email}</Text>
 
@@ -60,6 +66,7 @@ export default function TelaDePerfil() {
 const estilos = StyleSheet.create({
   container: { flex: 1, alignItems: 'center', paddingHorizontal: 24 },
   avatar: { width: 96, height: 96, borderRadius: 48, marginBottom: 16 },
+  avatarVazio: { alignItems: 'center', justifyContent: 'center' },
   nome: { fontSize: 20, fontWeight: '800' },
   email: { fontSize: 13, marginTop: 4, marginBottom: 32 },
   linhaConfig: {
