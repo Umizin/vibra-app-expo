@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { ApiClientError } from '@/services/api';
 import { playlistService } from '@/services/playlistService';
@@ -112,15 +112,16 @@ export function criarGerenciadorBibliotecaPlaylists(service: PlaylistService = p
   };
 }
 
+const gerenciador = criarGerenciadorBibliotecaPlaylists();
+
 export function useBibliotecaPlaylists() {
-  const gerenciador = useMemo(() => criarGerenciadorBibliotecaPlaylists(), []);
   const [estado, setEstado] = useState(gerenciador.obterEstado());
 
   useEffect(() => {
     const pararDeObservar = gerenciador.observar(setEstado);
     void gerenciador.carregar();
     return pararDeObservar;
-  }, [gerenciador]);
+  }, []);
 
   return {
     estado,
