@@ -5,7 +5,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { personalidades } from '@/constants/generos';
+import { personalidadeDe } from '@/constants/generos';
 import { useTema } from '@/contexts/TemaContext';
 import { useRequisicao } from '@/hooks/useRequisicao';
 import { historicoService } from '@/services/historicoService';
@@ -18,9 +18,7 @@ export default function TelaDoPulso() {
   const historico = useRequisicao(() => historicoService.listar(), []);
 
   const pulso = calcularPulso(historico.dado ?? []);
-  const personalidade = pulso.topGenero && pulso.topGenero in personalidades
-    ? personalidades[pulso.topGenero as keyof typeof personalidades]
-    : null;
+  const personalidade = personalidadeDe(pulso.topGenero);
 
   const cartoes = [
     { icone: 'time', rotulo: 'Minutos de música', valor: String(pulso.minutos) },
