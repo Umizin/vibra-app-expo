@@ -2,6 +2,15 @@ import type { ErrorRequestHandler } from 'express';
 import { ZodError } from 'zod';
 
 import { BusinessError, type BusinessErrorCode } from '../errors/business-error.js';
+import {
+  JamendoApiError,
+  JamendoCredentialMissingError,
+  JamendoHttpError,
+  JamendoJsonError,
+  JamendoProviderUnavailableError,
+  JamendoResponseError,
+  JamendoTimeoutError,
+} from '../integrations/jamendo/jamendo.errors.js';
 
 const errosDeNegocio: Record<BusinessErrorCode, { status: number; message: string }> = {
   EMAIL_ALREADY_IN_USE: { status: 409, message: 'Este e-mail já está em uso.' },
@@ -12,6 +21,7 @@ const errosDeNegocio: Record<BusinessErrorCode, { status: number; message: strin
   PLAYLIST_POSITION_IN_USE: { status: 409, message: 'Esta posição já está ocupada na playlist.' },
   FAVORITE_ALREADY_EXISTS: { status: 409, message: 'Esta faixa já está nos favoritos.' },
   FAVORITE_NOT_FOUND: { status: 404, message: 'Favorito não encontrado.' },
+  CATALOG_GENRE_UNSUPPORTED: { status: 422, message: 'Este gênero ainda não pode ser usado como filtro.' },
   INVALID_EMAIL: { status: 422, message: 'O e-mail informado é inválido.' },
   INVALID_DISPLAY_NAME: { status: 422, message: 'O nome de exibição informado é inválido.' },
   INVALID_CREDENTIALS: { status: 401, message: 'E-mail ou senha inválidos.' },
@@ -35,6 +45,28 @@ export const errorMiddleware: ErrorRequestHandler = (error, _request, response, 
         code: 'INVALID_JSON',
         message: 'O corpo da requisição contém JSON inválido.',
       },
+    });
+    return;
+  }
+
+  if (error instanceof JamendoTimeoutError) {
+    response.status(504).json({
+      error: { code: 'CATALOG_TIMEOUT', message: 'O catálogo musical demorou para responder.' },
+    });
+    return;
+  }
+
+  if (error instanceof JamendoCredentialMissingError || error instanceof JamendoProviderUnavailableError) {
+    response.status(503).json({
+      error: { code: 'CATALOG_UNAVAILABLE', message: 'O catálogo musical está temporariamente indisponível.' },
+    });
+    return;
+  }
+
+  if (error instanceof JamendoHttpError || error instanceof JamendoApiError ||
+      error instanceof JamendoJsonError || error instanceof JamendoResponseError) {
+    response.status(502).json({
+      error: { code: 'CATALOG_PROVIDER_ERROR', message: 'Não foi possível consultar o catálogo musical.' },
     });
     return;
   }
