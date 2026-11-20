@@ -8,6 +8,7 @@ const schemaDeAmbiente = z.object({
   PORT: z.coerce.number().int().min(1).max(65535).default(3001),
   FRONTEND_ORIGIN: z.string().url({ message: 'deve ser uma URL válida' }),
   DATABASE_URL: z.string().url().optional(),
+  JAMENDO_CLIENT_ID: z.string().trim().min(1).optional(),
   JWT_SECRET: z.string().refine((secret) => Buffer.byteLength(secret, 'utf8') >= 32, {
     message: 'deve conter pelo menos 32 bytes',
   }),
