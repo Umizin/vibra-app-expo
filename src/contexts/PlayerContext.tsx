@@ -1,3 +1,4 @@
+import { setAudioModeAsync, useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 
 import { historicoService } from '@/services/historicoService';
@@ -21,51 +22,48 @@ const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
 export function PlayerProvider({ children }: { children: ReactNode }) {
   const [faixaAtual, setFaixaAtual] = useState<Faixa | null>(null);
   const [filaDeFaixas, setFilaDeFaixas] = useState<Faixa[]>([]);
-  const [estaTocando, setEstaTocando] = useState(false);
-  const [progressoEmSegundos, setProgressoEmSegundos] = useState(0);
+  const player = useAudioPlayer();
+  const status = useAudioPlayerStatus(player);
+
+  useEffect(() => {
+    setAudioModeAsync({ playsInSilentMode: true }).catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    if (!faixaAtual) return;
+    historicoService.registrar(faixaAtual).catch(() => undefined);
+    if (!faixaAtual.audioUrl) {
+      player.pause();
+      return;
+    }
+    player.replace({ uri: faixaAtual.audioUrl });
+    player.play();
+  }, [faixaAtual, player]);
+
+  useEffect(() => {
+    if (status.didJustFinish) mudarFaixaNaFila(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status.didJustFinish]);
 
   function mudarFaixaNaFila(deslocamento: number) {
-    setFaixaAtual((atual) => {
-      if (!atual) return atual;
-      const indiceAtual = filaDeFaixas.findIndex((item) => item.id === atual.id);
-      const proximoIndice = indiceAtual + deslocamento;
-      if (proximoIndice < 0 || proximoIndice >= filaDeFaixas.length) return atual;
-      setProgressoEmSegundos(0);
-      return filaDeFaixas[proximoIndice];
-    });
+    const indice = filaDeFaixas.findIndex((item) => item.id === faixaAtual?.id) + deslocamento;
+    if (indice >= 0 && indice < filaDeFaixas.length) setFaixaAtual(filaDeFaixas[indice]);
   }
 
-  useEffect(() => {
-    if (faixaAtual) historicoService.registrar(faixaAtual).catch(() => undefined);
-  }, [faixaAtual]);
-
-  useEffect(() => {
-    if (!estaTocando || !faixaAtual) return;
-
-    const intervalo = setInterval(() => {
-      setProgressoEmSegundos((atual) => {
-        if (atual + 1 >= faixaAtual.duracaoEmSegundos) {
-          mudarFaixaNaFila(1);
-          return 0;
-        }
-        return atual + 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(intervalo);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [estaTocando, faixaAtual, filaDeFaixas]);
-
   function tocarFaixa(faixa: Faixa, fila: Faixa[] = [faixa]) {
-    setFaixaAtual(faixa);
     setFilaDeFaixas(fila);
-    setProgressoEmSegundos(0);
-    setEstaTocando(true);
+    if (faixa.id !== faixaAtual?.id) {
+      setFaixaAtual(faixa);
+      return;
+    }
+    player.seekTo(0);
+    player.play();
   }
 
   function alternarReproducao() {
     if (!faixaAtual) return;
-    setEstaTocando((atual) => !atual);
+    if (status.playing) player.pause();
+    else player.play();
   }
 
   function removerDaFila(idDaFaixa: string) {
@@ -77,11 +75,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       value={{
         faixaAtual,
         filaDeFaixas,
-        estaTocando,
-        progressoEmSegundos,
+        estaTocando: status.playing,
+        progressoEmSegundos: Math.floor(status.currentTime),
         tocarFaixa,
         alternarReproducao,
-        pausar: () => setEstaTocando(false),
+        pausar: () => player.pause(),
         removerDaFila,
         irParaProxima: () => mudarFaixaNaFila(1),
         irParaAnterior: () => mudarFaixaNaFila(-1),
