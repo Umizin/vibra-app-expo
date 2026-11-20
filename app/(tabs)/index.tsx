@@ -11,6 +11,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { usePlayer } from '@/contexts/PlayerContext';
 import { usePreferencias } from '@/contexts/PreferenciasContext';
 import { useTema } from '@/contexts/TemaContext';
+import { useBibliotecaPlaylists } from '@/hooks/useBibliotecaPlaylists';
 import { useRequisicao } from '@/hooks/useRequisicao';
 import { catalogoService } from '@/services/catalogoService';
 
@@ -27,7 +28,7 @@ export default function TelaInicial() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const playlists = useRequisicao(() => catalogoService.listarPlaylists(), []);
+  const { estado: { playlists } } = useBibliotecaPlaylists();
   const albuns = useRequisicao(() => catalogoService.listarAlbuns(), []);
   const { generos } = usePreferencias();
   const { tocarFaixa } = usePlayer();
@@ -69,28 +70,23 @@ export default function TelaInicial() {
               />
             ))
           ) : (
-            <Text style={[estilos.estado, { color: cores.textoSecundario }]}>Nenhuma faixa encontrada para seus estilos compatíveis.</Text>
+            <Text style={[estilos.estado, { color: cores.textoSecundario }]}>Nenhuma faixa encontrada para seus estilos.</Text>
           )}
         </SecaoComTitulo>
       )}
 
-      <SecaoComTitulo titulo="Feitas para você">
-        {playlists.carregando ? (
-          <ActivityIndicator color={cores.destaque} />
-        ) : playlists.erro ? (
-          <Text style={[estilos.estado, { color: cores.perigo }]}>{playlists.erro}</Text>
-        ) : (
-          playlists.dado?.map((playlist) => (
+      {playlists.length > 0 && (
+        <SecaoComTitulo titulo="Suas playlists">
+          {playlists.map((playlist) => (
             <CartaoDeCapa
               key={playlist.id}
-              titulo={playlist.titulo}
-              subtitulo={playlist.descricao}
-              capaUrl={playlist.capaUrl}
+              titulo={playlist.name}
+              subtitulo={playlist.description || `${playlist.trackCount} faixa(s)`}
               aoPressionar={() => router.push(`/playlist/${playlist.id}`)}
             />
-          ))
-        )}
-      </SecaoComTitulo>
+          ))}
+        </SecaoComTitulo>
+      )}
 
       <SecaoComTitulo titulo="Álbuns em alta">
         {albuns.carregando ? (
