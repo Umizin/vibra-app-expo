@@ -37,14 +37,6 @@ export type Album = {
   faixas?: Faixa[];
 };
 
-export type Playlist = {
-  id: string;
-  titulo: string;
-  descricao: string;
-  capaUrl: string;
-  faixas: Faixa[];
-};
-
 /** Playlist persistida retornada pela API Vibra. Datas chegam como strings JSON. */
 export type PlaylistPersistida = {
   id: string;
@@ -83,12 +75,4 @@ export type Artista = {
   fotoUrl?: string;
   website?: string;
   shareUrl?: string;
-};
-
-export type ColecaoDeFaixas = {
-  id: string;
-  titulo: string;
-  legenda: string;
-  capaUrl?: string;
-  faixas: Faixa[];
 };

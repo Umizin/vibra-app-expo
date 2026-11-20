@@ -1,6 +1,5 @@
 import { apiClient, ApiClientError } from './api';
-import type { Album, Artista, ColecaoDeFaixas, Faixa } from '@/types/modelos';
-import { albuns, playlists } from '@/data/catalogo';
+import type { Album, Artista, Faixa } from '@/types/modelos';
 
 export type PaginacaoCatalogo = {
   offset: number;
@@ -64,7 +63,7 @@ type QueryCatalogo = {
 };
 
 const LIMITE_PADRAO = 20;
-const GENEROS_COM_FILTRO_NO_BACKEND = new Set(['Rock', 'Pop', 'Eletrônica']);
+const LIMITE_POR_LOTE = 50;
 
 function queryString(query: QueryCatalogo): string {
   const params = new URLSearchParams();
@@ -208,9 +207,15 @@ async function buscarFaixasPorIds(ids: string[]): Promise<ResultadoFaixasPorIds>
   };
 }
 
+async function buscarFaixasEmLotes(ids: string[]): Promise<Faixa[]> {
+  const lotes: string[][] = [];
+  for (let i = 0; i < ids.length; i += LIMITE_POR_LOTE) lotes.push(ids.slice(i, i + LIMITE_POR_LOTE));
+  const resultados = await Promise.all(lotes.map(buscarFaixasPorIds));
+  return resultados.flatMap((resultado) => resultado.data);
+}
+
 async function buscarPorGeneros(generos: string[]): Promise<Faixa[]> {
-  const permitidos = [...new Set(generos)].filter((genero) => GENEROS_COM_FILTRO_NO_BACKEND.has(genero));
-  const pages = await Promise.all(permitidos.map((genre) => buscarFaixas({ genre, limit: 20 })));
+  const pages = await Promise.all([...new Set(generos)].map((genre) => buscarFaixas({ genre, limit: 20 })));
   const seen = new Set<string>();
   return pages.flatMap((page) => page.data).filter((faixa) => {
     if (seen.has(faixa.id)) return false;
@@ -257,39 +262,13 @@ async function obterAlbum(albumId: string): Promise<Album> {
   return mapAlbum(result.data as unknown as AlbumApi);
 }
 
-function buscarColecaoPorId(id: string): Promise<ColecaoDeFaixas | null> {
-  // Detalhes de playlists mockadas permanecem locais nesta etapa. Álbuns reais têm telas próprias.
-  const playlist = playlists.find((item) => item.id === id);
-  if (playlist) {
-    return Promise.resolve({
-      id: playlist.id,
-      titulo: playlist.titulo,
-      legenda: playlist.descricao,
-      capaUrl: playlist.capaUrl,
-      faixas: playlist.faixas,
-    });
-  }
-  const localAlbum = albuns.find((item) => item.id === id);
-  if (localAlbum) {
-    return Promise.resolve({
-      id: localAlbum.id,
-      titulo: localAlbum.titulo,
-      legenda: `Álbum · ${localAlbum.artista}`,
-      capaUrl: localAlbum.capaUrl,
-      faixas: localAlbum.faixas ?? [],
-    });
-  }
-  return Promise.resolve(null);
-}
-
 export const catalogoService = {
-  listarPlaylists: () => Promise.resolve(playlists),
   listarAlbuns: (offset = 0, limit = LIMITE_PADRAO) => buscarAlbuns('', undefined, offset, limit),
   listarArtistas: (offset = 0, limit = LIMITE_PADRAO) => buscarArtistas('', offset, limit),
-  buscarColecaoPorId,
   buscarPorTermo,
   buscarFaixas,
   buscarFaixasPorIds,
+  buscarFaixasEmLotes,
   buscarPorGeneros,
   buscarArtistas,
   obterArtista,

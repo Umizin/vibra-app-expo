@@ -1,22 +1,26 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { LinhaDeFaixa } from '@/components/LinhaDeFaixa';
 import { useFavoritos } from '@/contexts/FavoritosContext';
 import { usePlayer } from '@/contexts/PlayerContext';
 import { useTema } from '@/contexts/TemaContext';
-import { todasAsFaixas } from '@/data/catalogo';
+import { useRequisicao } from '@/hooks/useRequisicao';
+import { catalogoService } from '@/services/catalogoService';
 
 export default function TelaDeFavoritas() {
   const { cores } = useTema();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { idsFavoritos } = useFavoritos();
+  const { idsFavoritos, carregando: carregandoIds, erro: erroIds } = useFavoritos();
   const { tocarFaixa } = usePlayer();
 
-  const faixasFavoritas = todasAsFaixas.filter((faixa) => idsFavoritos.includes(faixa.id));
+  const faixas = useRequisicao(() => catalogoService.buscarFaixasEmLotes(idsFavoritos), [carregandoIds]);
+  const faixasFavoritas = (faixas.dado ?? []).filter((faixa) => idsFavoritos.includes(faixa.id));
+  const carregando = carregandoIds || (faixas.carregando && !faixas.dado);
+  const erro = erroIds ?? faixas.erro;
 
   return (
     <View style={[estilos.container, { backgroundColor: cores.fundo, paddingTop: insets.top + 12 }]}>
@@ -27,19 +31,25 @@ export default function TelaDeFavoritas() {
         <Text style={[estilos.titulo, { color: cores.texto }]}>Músicas Curtidas</Text>
       </View>
 
-      <FlatList
-        data={faixasFavoritas}
-        keyExtractor={(faixa) => faixa.id}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 140 }}
-        renderItem={({ item }) => (
-          <LinhaDeFaixa faixa={item} aoPressionar={() => tocarFaixa(item, faixasFavoritas)} />
-        )}
-        ListEmptyComponent={
-          <Text style={[estilos.vazio, { color: cores.textoSecundario }]}>
-            Toque no coração de uma faixa para curti-la.
-          </Text>
-        }
-      />
+      {carregando ? (
+        <ActivityIndicator color={cores.destaque} style={{ marginTop: 40 }} />
+      ) : erro ? (
+        <Text style={[estilos.vazio, { color: cores.perigo }]}>{erro}</Text>
+      ) : (
+        <FlatList
+          data={faixasFavoritas}
+          keyExtractor={(faixa) => faixa.id}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 140 }}
+          renderItem={({ item }) => (
+            <LinhaDeFaixa faixa={item} aoPressionar={() => tocarFaixa(item, faixasFavoritas)} />
+          )}
+          ListEmptyComponent={
+            <Text style={[estilos.vazio, { color: cores.textoSecundario }]}>
+              Toque no coração de uma faixa para curti-la.
+            </Text>
+          }
+        />
+      )}
     </View>
   );
 }
