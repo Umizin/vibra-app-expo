@@ -11,6 +11,12 @@ export type PaginacaoCatalogo = {
 
 export type PaginaCatalogo<T> = { data: T[]; pagination: PaginacaoCatalogo };
 
+export type ResultadoFaixasPorIds = {
+  data: Faixa[];
+  requestedIds: string[];
+  missingIds: string[];
+};
+
 type FaixaApi = {
   id: string;
   titulo: string;
@@ -155,6 +161,53 @@ async function buscarFaixas(query: QueryCatalogo = {}): Promise<PaginaCatalogo<F
   return mapPage(page, mapFaixa);
 }
 
+async function buscarFaixasPorIds(ids: string[]): Promise<ResultadoFaixasPorIds> {
+  if (ids.length > 50) throw new RangeError('É possível consultar até 50 faixas por chamada.');
+  if (ids.some((id) => typeof id !== 'string' || id.length === 0 || id.length > 64)) {
+    throw new RangeError('Cada ID de faixa deve ser uma string entre 1 e 64 caracteres.');
+  }
+  if (new Set(ids).size !== ids.length) throw new RangeError('A lista de faixas não pode conter IDs duplicados.');
+  if (ids.length === 0) return { data: [], requestedIds: [], missingIds: [] };
+
+  // Jamendo IDs são dígitos. Referências antigas inválidas ficam explícitas como ausentes.
+  const idsConsultaveis = ids.filter((id) => /^\d+$/.test(id));
+  const idsInvalidos = ids.filter((id) => !/^\d+$/.test(id));
+  if (idsConsultaveis.length === 0) {
+    return { data: [], requestedIds: [...ids], missingIds: [...ids] };
+  }
+
+  const query = new URLSearchParams({ ids: idsConsultaveis.join(',') });
+  const response = await apiClient.get<unknown>(`/api/v1/catalog/tracks?${query.toString()}`, { authenticated: true });
+  if (!isRecord(response) || !Array.isArray(response.data) ||
+      !Array.isArray(response.requestedIds) || !Array.isArray(response.missingIds) ||
+      !response.requestedIds.every((id) => typeof id === 'string') ||
+      !response.missingIds.every((id) => typeof id === 'string')) {
+    throw new ApiClientError('A API retornou uma resolução de faixas inválida.', 'invalid-response');
+  }
+
+  const requestedIds = response.requestedIds as string[];
+  const missingFromApi = response.missingIds as string[];
+  const requestedSet = new Set(idsConsultaveis);
+  if (requestedIds.length !== idsConsultaveis.length ||
+      requestedIds.some((id) => !requestedSet.has(id)) ||
+      missingFromApi.some((id) => !requestedSet.has(id))) {
+    throw new ApiClientError('A API retornou identificadores inconsistentes para as faixas.', 'invalid-response');
+  }
+
+  const tracks = response.data.map((value) => mapFaixa(value as FaixaApi));
+  if (tracks.some((track) => !requestedSet.has(track.id))) {
+    throw new ApiClientError('A API retornou uma faixa que não foi solicitada.', 'invalid-response');
+  }
+  const foundIds = new Set(tracks.map((track) => track.id));
+  const missingSet = new Set([...missingFromApi, ...idsInvalidos]);
+
+  return {
+    data: tracks,
+    requestedIds: [...ids],
+    missingIds: ids.filter((id) => missingSet.has(id) || (requestedSet.has(id) && !foundIds.has(id))),
+  };
+}
+
 async function buscarPorGeneros(generos: string[]): Promise<Faixa[]> {
   const permitidos = [...new Set(generos)].filter((genero) => GENEROS_COM_FILTRO_NO_BACKEND.has(genero));
   const pages = await Promise.all(permitidos.map((genre) => buscarFaixas({ genre, limit: 20 })));
@@ -236,6 +289,7 @@ export const catalogoService = {
   buscarColecaoPorId,
   buscarPorTermo,
   buscarFaixas,
+  buscarFaixasPorIds,
   buscarPorGeneros,
   buscarArtistas,
   obterArtista,
