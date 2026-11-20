@@ -17,6 +17,8 @@ const errosDeNegocio: Record<BusinessErrorCode, { status: number; message: strin
   USER_NOT_FOUND: { status: 404, message: 'Usuário não encontrado.' },
   PLAYLIST_NOT_FOUND: { status: 404, message: 'Playlist não encontrada.' },
   TRACK_NOT_FOUND: { status: 404, message: 'Faixa não encontrada.' },
+  ARTIST_NOT_FOUND: { status: 404, message: 'Artista não encontrado.' },
+  ALBUM_NOT_FOUND: { status: 404, message: 'Álbum não encontrado.' },
   TRACK_ALREADY_IN_PLAYLIST: { status: 409, message: 'Esta faixa já está na playlist.' },
   PLAYLIST_POSITION_IN_USE: { status: 409, message: 'Esta posição já está ocupada na playlist.' },
   FAVORITE_ALREADY_EXISTS: { status: 409, message: 'Esta faixa já está nos favoritos.' },
