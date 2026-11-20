@@ -14,6 +14,7 @@ const errosDeNegocio: Record<BusinessErrorCode, { status: number; message: strin
   FAVORITE_NOT_FOUND: { status: 404, message: 'Favorito não encontrado.' },
   INVALID_EMAIL: { status: 422, message: 'O e-mail informado é inválido.' },
   INVALID_DISPLAY_NAME: { status: 422, message: 'O nome de exibição informado é inválido.' },
+  INVALID_CREDENTIALS: { status: 401, message: 'E-mail ou senha inválidos.' },
   INVALID_UPDATE: { status: 422, message: 'Os dados enviados para atualização são inválidos.' },
 };
 

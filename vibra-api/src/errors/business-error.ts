@@ -9,6 +9,7 @@ export type BusinessErrorCode =
   | 'FAVORITE_NOT_FOUND'
   | 'INVALID_EMAIL'
   | 'INVALID_DISPLAY_NAME'
+  | 'INVALID_CREDENTIALS'
   | 'INVALID_UPDATE';
 
 export class BusinessError extends Error {
