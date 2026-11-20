@@ -17,3 +17,56 @@ export const jamendoEnvelopeSchema = z
     results: z.array(z.record(z.string(), z.unknown())),
   })
   .passthrough();
+
+const externalIdSchema = z
+  .union([z.string().min(1), z.number().int().nonnegative()])
+  .transform(String);
+
+const optionalExternalIdSchema = z
+  .union([externalIdSchema, z.literal(''), z.null()])
+  .optional()
+  .transform((value) => value === undefined || value === null || value === '' ? undefined : value);
+
+const optionalTextSchema = z
+  .union([z.string(), z.null()])
+  .optional()
+  .transform((value) => value === undefined || value === null || value === '' ? undefined : value);
+
+const optionalUrlSchema = z
+  .union([
+    z.string().url().refine((value) => value.startsWith('https://')),
+    z.literal(''),
+    z.null(),
+  ])
+  .optional()
+  .transform((value) => value === undefined || value === null || value === '' ? undefined : value);
+
+const jamendoMusicInfoSchema = z.object({
+  tags: z.object({
+    genres: z.array(z.string()).nullable().optional(),
+    instruments: z.array(z.string()).nullable().optional(),
+    vartags: z.array(z.string()).nullable().optional(),
+  }).passthrough().optional().nullable(),
+}).passthrough().optional().nullable();
+
+export const jamendoTrackSchema = z.object({
+  id: externalIdSchema,
+  name: z.string().min(1),
+  artist_id: externalIdSchema,
+  artist_name: z.string().min(1),
+  duration: z.number().int().nonnegative(),
+  album_id: optionalExternalIdSchema,
+  album_name: optionalTextSchema,
+  image: optionalUrlSchema,
+  audio: optionalUrlSchema,
+  license_ccurl: optionalTextSchema,
+  shareurl: optionalUrlSchema,
+  shorturl: optionalUrlSchema,
+  musicinfo: jamendoMusicInfoSchema,
+}).passthrough();
+
+export const jamendoTrackEnvelopeSchema = jamendoEnvelopeSchema.extend({
+  results: z.array(jamendoTrackSchema),
+});
+
+export type JamendoTrack = z.output<typeof jamendoTrackSchema>;
