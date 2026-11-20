@@ -56,16 +56,20 @@ export default function TelaInicial() {
         <SecaoComTitulo titulo="Na sua vibe">
           {daVibe.carregando ? (
             <ActivityIndicator color={cores.destaque} />
-          ) : (
-            daVibe.dado?.map((faixa) => (
+          ) : daVibe.erro ? (
+            <Text style={[estilos.estado, { color: cores.perigo }]}>{daVibe.erro}</Text>
+          ) : daVibe.dado?.length ? (
+            daVibe.dado.map((faixa) => (
               <CartaoDeCapa
                 key={faixa.id}
                 titulo={faixa.titulo}
-                subtitulo={`${faixa.artista} · ${faixa.genero}`}
+                subtitulo={faixa.artista}
                 capaUrl={faixa.capaUrl}
                 aoPressionar={() => tocarFaixa(faixa, daVibe.dado ?? [faixa])}
               />
             ))
+          ) : (
+            <Text style={[estilos.estado, { color: cores.textoSecundario }]}>Nenhuma faixa encontrada para seus estilos compatíveis.</Text>
           )}
         </SecaoComTitulo>
       )}
@@ -73,6 +77,8 @@ export default function TelaInicial() {
       <SecaoComTitulo titulo="Feitas para você">
         {playlists.carregando ? (
           <ActivityIndicator color={cores.destaque} />
+        ) : playlists.erro ? (
+          <Text style={[estilos.estado, { color: cores.perigo }]}>{playlists.erro}</Text>
         ) : (
           playlists.dado?.map((playlist) => (
             <CartaoDeCapa
@@ -89,16 +95,20 @@ export default function TelaInicial() {
       <SecaoComTitulo titulo="Álbuns em alta">
         {albuns.carregando ? (
           <ActivityIndicator color={cores.destaque} />
-        ) : (
-          albuns.dado?.map((album) => (
+        ) : albuns.erro ? (
+          <Text style={[estilos.estado, { color: cores.perigo }]}>{albuns.erro}</Text>
+        ) : albuns.dado?.data.length ? (
+          albuns.dado.data.map((album) => (
             <CartaoDeCapa
               key={album.id}
               titulo={album.titulo}
               subtitulo={album.artista}
               capaUrl={album.capaUrl}
-              aoPressionar={() => router.push(`/playlist/${album.id}`)}
+              aoPressionar={() => router.push(`/album/${album.id}` as never)}
             />
           ))
+        ) : (
+          <Text style={[estilos.estado, { color: cores.textoSecundario }]}>Nenhum álbum disponível no catálogo.</Text>
         )}
       </SecaoComTitulo>
     </ScrollView>
@@ -111,4 +121,5 @@ const estilos = StyleSheet.create({
   gradiente: { flexDirection: 'row', alignItems: 'center', borderRadius: 16, padding: 20, gap: 12 },
   tituloBanner: { color: corSobreHumor, fontSize: 20, fontWeight: '900' },
   legendaBanner: { color: corSobreHumor, opacity: 0.85, fontSize: 13, marginTop: 4 },
+  estado: { fontSize: 13, paddingHorizontal: 16, paddingVertical: 8 },
 });

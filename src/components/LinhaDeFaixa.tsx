@@ -19,7 +19,13 @@ export function LinhaDeFaixa({ faixa, aoPressionar }: Propriedades) {
 
   return (
     <Pressable onPress={aoPressionar} style={estilos.container}>
-      <Image source={{ uri: faixa.capaUrl }} style={estilos.capa} contentFit="cover" />
+      {faixa.capaUrl ? (
+        <Image source={{ uri: faixa.capaUrl }} style={estilos.capa} contentFit="cover" />
+      ) : (
+        <View style={[estilos.capa, estilos.capaVazia, { backgroundColor: cores.superficieElevada }]}>
+          <Ionicons name="musical-notes" size={20} color={cores.textoSecundario} />
+        </View>
+      )}
       <View style={estilos.informacoes}>
         <Text style={[estilos.titulo, { color: cores.texto }]} numberOfLines={1}>
           {faixa.titulo}
@@ -45,6 +51,7 @@ export function LinhaDeFaixa({ faixa, aoPressionar }: Propriedades) {
 const estilos = StyleSheet.create({
   container: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, gap: 12 },
   capa: { width: 44, height: 44, borderRadius: 4 },
+  capaVazia: { alignItems: 'center', justifyContent: 'center' },
   informacoes: { flex: 1 },
   titulo: { fontSize: 15, fontWeight: '600' },
   artista: { fontSize: 12, marginTop: 2 },

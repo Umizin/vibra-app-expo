@@ -21,9 +21,13 @@ export function useRequisicao<T>(tarefa: () => Promise<T>, dependencias: unknown
       .then((resultado) => {
         if (!cancelada) setEstado({ dado: resultado, carregando: false, erro: null });
       })
-      .catch(() => {
+      .catch((erro: unknown) => {
         if (!cancelada) {
-          setEstado({ dado: null, carregando: false, erro: 'Não foi possível carregar os dados.' });
+          setEstado({
+            dado: null,
+            carregando: false,
+            erro: erro instanceof Error ? erro.message : 'Não foi possível carregar os dados.',
+          });
         }
       });
 
