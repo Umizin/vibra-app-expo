@@ -102,12 +102,28 @@ function paginate<T>(items: T[], offset: number, limit: number) {
   };
 }
 
-// Jamendo documents these featured tags; other Vibra genres are not guessed.
-const GENRE_TAG_MAP: Partial<Record<NonNullable<CatalogTracksQuery['genre']>, string>> = {
-  Rock: 'rock',
-  Pop: 'pop',
-  Eletrônica: 'electronic',
-};
+type VibraGenre = NonNullable<CatalogTracksQuery['genre']>;
+
+const GENRE_TAGS: [VibraGenre, string][] = [
+  ['Rock', 'rock'],
+  ['Pop', 'pop'],
+  ['Eletrônica', 'electronic'],
+  ['Lo-fi', 'lounge'],
+  ['Indie', 'indie'],
+  ['MPB', 'latin'],
+];
+
+const GENRE_TAG_MAP = new Map(GENRE_TAGS);
+
+const TAG_GENRE_MAP = new Map<string, VibraGenre>([
+  ...GENRE_TAGS.map(([genre, tag]): [string, VibraGenre] => [tag, genre]),
+  ['chillout', 'Lo-fi'],
+  ['lofi', 'Lo-fi'],
+]);
+
+function findVibraGenre(tags: string[]): VibraGenre | undefined {
+  return tags.map((tag) => TAG_GENRE_MAP.get(tag.toLowerCase())).find((genre) => genre !== undefined);
+}
 
 function mapTrack(track: JamendoTrack): TrackDto {
   const musicTags = track.musicinfo?.tags;
@@ -117,6 +133,7 @@ function mapTrack(track: JamendoTrack): TrackDto {
     ...(musicTags?.instruments ?? []),
     ...(musicTags?.vartags ?? []),
   ];
+  const genero = findVibraGenre(genreTags);
 
   return {
     id: track.id,
@@ -128,7 +145,7 @@ function mapTrack(track: JamendoTrack): TrackDto {
     duracaoEmSegundos: track.duration,
     ...(track.image ? { capaUrl: track.image } : {}),
     ...(track.audio ? { audioUrl: track.audio } : {}),
-    ...(genreTags[0] ? { genero: genreTags[0] } : {}),
+    ...(genero ? { genero } : {}),
     tags,
     ...(track.license_ccurl ? { license: track.license_ccurl } : {}),
     ...(track.shareurl || track.shorturl
@@ -141,16 +158,7 @@ export class CatalogService {
   constructor(private readonly client: Pick<JamendoClient, 'get'> = jamendoClient) {}
 
   async searchTracks(query: CatalogTracksQuery): Promise<TrackSearchResult> {
-    let tag: string | undefined;
-    if (query.genre) {
-      tag = GENRE_TAG_MAP[query.genre];
-      if (!tag) {
-        throw new BusinessError(
-          'CATALOG_GENRE_UNSUPPORTED',
-          'Este gênero ainda não possui um filtro confiável no catálogo.',
-        );
-      }
-    }
+    const tag = query.genre ? GENRE_TAG_MAP.get(query.genre) : undefined;
 
     const envelope = await this.client.get('tracks', {
       search: query.q || undefined,

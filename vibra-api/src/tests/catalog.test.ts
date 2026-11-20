@@ -99,8 +99,12 @@ test('filtra por artista e álbum com IDs externos em string', async () => {
   assert.equal(received?.album_id, '202');
 });
 
-test('mapeia somente os gêneros Vibra com correspondência definida', async () => {
-  for (const [genre, tag] of [['Rock', 'rock'], ['Pop', 'pop'], ['Eletrônica', 'electronic']] as const) {
+test('mapeia todos os gêneros Vibra para tags Jamendo', async () => {
+  const cases = [
+    ['Rock', 'rock'], ['Pop', 'pop'], ['Eletrônica', 'electronic'],
+    ['Lo-fi', 'lounge'], ['Indie', 'indie'], ['MPB', 'latin'],
+  ] as const;
+  for (const [genre, tag] of cases) {
     let received: JamendoQuery | undefined;
     const service = new CatalogService(mockClient(async (_resource, query) => {
       received = query;
@@ -112,19 +116,20 @@ test('mapeia somente os gêneros Vibra com correspondência definida', async () 
   }
 });
 
-test('não inventa tags para gêneros sem correspondência confiável', async () => {
-  for (const genre of ['MPB', 'Lo-fi', 'Indie'] as const) {
-    let called = false;
-    const service = new CatalogService(mockClient(async () => {
-      called = true;
-      return envelope([]);
-    }));
-
-    await assert.rejects(
-      service.searchTracks({ ...defaultQuery, genre }),
-      (error: unknown) => error instanceof BusinessError && error.code === 'CATALOG_GENRE_UNSUPPORTED',
-    );
-    assert.equal(called, false);
+test('devolve o gênero Vibra da primeira tag mapeável e omite quando nenhuma mapeia', async () => {
+  const cases = [
+    [['electronic'], 'Eletrônica'],
+    [['ambient', 'chillout'], 'Lo-fi'],
+    [['lofi'], 'Lo-fi'],
+    [['latin', 'rock'], 'MPB'],
+    [['ambient'], undefined],
+  ] as const;
+  for (const [genres, genero] of cases) {
+    const track = { ...trackOne, musicinfo: { tags: { genres: [...genres] } } };
+    const service = new CatalogService(mockClient(async () => envelope([track])));
+    const result = await service.getTrackById('12345');
+    assert.equal(result.genero, genero);
+    assert.deepEqual(result.tags, genres);
   }
 });
 
@@ -279,7 +284,7 @@ test('preserva os dados públicos Jamendo permitidos no DTO e omite detalhes ext
     duracaoEmSegundos: 213,
     capaUrl: 'https://usercontent.jamendo.com/cover.jpg',
     audioUrl: 'https://prod-1.storage.jamendo.com/audio.mp3',
-    genero: 'rock',
+    genero: 'Rock',
     tags: ['rock', 'guitar', 'groovy'],
     license: 'https://creativecommons.org/licenses/by/4.0/',
     jamendoUrl: 'https://www.jamendo.com/track/12345',

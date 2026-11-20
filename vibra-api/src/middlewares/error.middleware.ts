@@ -23,7 +23,6 @@ const errosDeNegocio: Record<BusinessErrorCode, { status: number; message: strin
   PLAYLIST_POSITION_IN_USE: { status: 409, message: 'Esta posição já está ocupada na playlist.' },
   FAVORITE_ALREADY_EXISTS: { status: 409, message: 'Esta faixa já está nos favoritos.' },
   FAVORITE_NOT_FOUND: { status: 404, message: 'Favorito não encontrado.' },
-  CATALOG_GENRE_UNSUPPORTED: { status: 422, message: 'Este gênero ainda não pode ser usado como filtro.' },
   INVALID_EMAIL: { status: 422, message: 'O e-mail informado é inválido.' },
   INVALID_DISPLAY_NAME: { status: 422, message: 'O nome de exibição informado é inválido.' },
   INVALID_CREDENTIALS: { status: 401, message: 'E-mail ou senha inválidos.' },
