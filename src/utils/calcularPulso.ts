@@ -1,4 +1,3 @@
-import { Genero } from '@/constants/generos';
 import { Reproducao } from '@/types/modelos';
 
 export type Periodo = 'madrugada' | 'manhã' | 'tarde' | 'noite';
@@ -9,7 +8,7 @@ export type Pulso = {
   topArtista: string | null;
   topFaixa: string | null;
   periodo: Periodo | null;
-  topGenero: Genero | null;
+  topGenero: string | null;
 };
 
 function maisFrequente<T>(itens: T[]): T | null {
@@ -36,6 +35,9 @@ function periodoDaHora(hora: number): Periodo {
 
 export function calcularPulso(historico: Reproducao[]): Pulso {
   const segundos = historico.reduce((total, { faixa }) => total + faixa.duracaoEmSegundos, 0);
+  const generos = historico
+    .map(({ faixa }) => faixa.genero)
+    .filter((genero): genero is string => genero !== undefined);
 
   return {
     minutos: Math.round(segundos / 60),
@@ -43,6 +45,6 @@ export function calcularPulso(historico: Reproducao[]): Pulso {
     topArtista: maisFrequente(historico.map(({ faixa }) => faixa.artista)),
     topFaixa: maisFrequente(historico.map(({ faixa }) => faixa.titulo)),
     periodo: maisFrequente(historico.map(({ tocadaEm }) => periodoDaHora(new Date(tocadaEm).getHours()))),
-    topGenero: maisFrequente(historico.map(({ faixa }) => faixa.genero)),
+    topGenero: maisFrequente(generos),
   };
 }

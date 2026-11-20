@@ -1,19 +1,24 @@
-import { Genero } from '@/constants/generos';
-
 export type Usuario = {
   id: string;
   nome: string;
   email: string;
-  avatarUrl: string;
+  avatarUrl?: string;
 };
 
 export type Faixa = {
   id: string;
   titulo: string;
   artista: string;
+  artistaId?: string;
+  albumId?: string;
+  album?: string;
   duracaoEmSegundos: number;
-  capaUrl: string;
-  genero: Genero;
+  capaUrl?: string;
+  genero?: string;
+  tags?: string[];
+  audioUrl?: string;
+  license?: string;
+  jamendoUrl?: string;
 };
 
 export type Reproducao = {
@@ -25,8 +30,11 @@ export type Album = {
   id: string;
   titulo: string;
   artista: string;
-  capaUrl: string;
-  faixas: Faixa[];
+  artistaId?: string;
+  capaUrl?: string;
+  releasedate?: string;
+  shareUrl?: string;
+  faixas?: Faixa[];
 };
 
 export type Playlist = {
@@ -40,13 +48,15 @@ export type Playlist = {
 export type Artista = {
   id: string;
   nome: string;
-  fotoUrl: string;
+  fotoUrl?: string;
+  website?: string;
+  shareUrl?: string;
 };
 
 export type ColecaoDeFaixas = {
   id: string;
   titulo: string;
   legenda: string;
-  capaUrl: string;
+  capaUrl?: string;
   faixas: Faixa[];
 };

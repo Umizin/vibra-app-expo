@@ -18,7 +18,9 @@ export default function TelaDoPulso() {
   const historico = useRequisicao(() => historicoService.listar(), []);
 
   const pulso = calcularPulso(historico.dado ?? []);
-  const personalidade = pulso.topGenero && personalidades[pulso.topGenero];
+  const personalidade = pulso.topGenero && pulso.topGenero in personalidades
+    ? personalidades[pulso.topGenero as keyof typeof personalidades]
+    : null;
 
   const cartoes = [
     { icone: 'time', rotulo: 'Minutos de música', valor: String(pulso.minutos) },
