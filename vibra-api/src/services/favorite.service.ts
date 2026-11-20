@@ -26,6 +26,14 @@ export const favoriteService = {
     return favoriteRepository.listByUser(userId);
   },
 
+  async getByTrackId(userId: string, jamendoTrackId: string) {
+    const isFavorited = await favoriteRepository.isFavorited(userId, jamendoTrackId);
+    if (!isFavorited) {
+      throw new BusinessError('FAVORITE_NOT_FOUND', 'Favorito não encontrado.');
+    }
+    return { jamendoTrackId };
+  },
+
   isFavorited(userId: string, jamendoTrackId: string) {
     return favoriteRepository.isFavorited(userId, jamendoTrackId);
   },
