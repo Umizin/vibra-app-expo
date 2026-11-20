@@ -1,9 +1,16 @@
 import { BusinessError } from '../errors/business-error.js';
 import { JamendoResponseError } from '../integrations/jamendo/jamendo.errors.js';
-import { jamendoTrackEnvelopeSchema, type JamendoTrack } from '../integrations/jamendo/jamendo.schemas.js';
+import {
+  jamendoAlbumEnvelopeSchema,
+  jamendoArtistEnvelopeSchema,
+  jamendoTrackEnvelopeSchema,
+  type JamendoAlbum,
+  type JamendoArtist,
+  type JamendoTrack,
+} from '../integrations/jamendo/jamendo.schemas.js';
 import { jamendoClient } from '../integrations/jamendo/jamendo.client.js';
 import type { JamendoClient } from '../integrations/jamendo/jamendo.client.js';
-import type { CatalogTracksQuery } from '../schemas/catalog.schema.js';
+import type { CatalogAlbumsQuery, CatalogArtistsQuery, CatalogTracksQuery } from '../schemas/catalog.schema.js';
 
 export type TrackDto = {
   id: string;
@@ -32,6 +39,62 @@ export type TrackSearchResult = {
   data: TrackDto[];
   pagination: TrackPagination;
 };
+
+export type ArtistDto = {
+  id: string;
+  name: string;
+  imageUrl?: string;
+  website?: string;
+  shareUrl?: string;
+};
+
+export type AlbumDto = {
+  id: string;
+  name: string;
+  artistId?: string;
+  artistName: string;
+  imageUrl?: string;
+  releasedate?: string;
+  shareUrl?: string;
+};
+
+export type ArtistSearchResult = { data: ArtistDto[]; pagination: TrackPagination };
+export type AlbumSearchResult = { data: AlbumDto[]; pagination: TrackPagination };
+
+function mapArtist(artist: JamendoArtist): ArtistDto {
+  return {
+    id: artist.id,
+    name: artist.name,
+    ...(artist.image ? { imageUrl: artist.image } : {}),
+    ...(artist.website ? { website: artist.website } : {}),
+    ...((artist.shareurl || artist.shorturl)
+      ? { shareUrl: artist.shareurl ?? artist.shorturl }
+      : {}),
+  };
+}
+
+function mapAlbum(album: JamendoAlbum): AlbumDto {
+  return {
+    id: album.id,
+    name: album.name,
+    ...(album.artist_id ? { artistId: album.artist_id } : {}),
+    artistName: album.artist_name,
+    ...(album.image ? { imageUrl: album.image } : {}),
+    ...(album.releasedate ? { releasedate: album.releasedate } : {}),
+    ...((album.shareurl || album.shorturl)
+      ? { shareUrl: album.shareurl ?? album.shorturl }
+      : {}),
+  };
+}
+
+function paginate<T>(items: T[], offset: number, limit: number) {
+  const hasMore = items.length > limit;
+  const data = items.slice(0, limit);
+  return {
+    data,
+    pagination: { offset, limit, count: data.length, hasMore },
+  };
+}
 
 // Jamendo documents these featured tags; other Vibra genres are not guessed.
 const GENRE_TAG_MAP: Partial<Record<NonNullable<CatalogTracksQuery['genre']>, string>> = {
@@ -97,19 +160,7 @@ export class CatalogService {
     const parsed = jamendoTrackEnvelopeSchema.safeParse(envelope);
     if (!parsed.success) throw new JamendoResponseError(parsed.error);
 
-    const mapped = parsed.data.results.map(mapTrack);
-    const hasMore = mapped.length > query.limit;
-    const data = mapped.slice(0, query.limit);
-
-    return {
-      data,
-      pagination: {
-        offset: query.offset,
-        limit: query.limit,
-        count: data.length,
-        hasMore,
-      },
-    };
+    return paginate(parsed.data.results.map(mapTrack), query.offset, query.limit);
   }
 
   async getTrackById(trackId: string): Promise<TrackDto> {
@@ -125,6 +176,47 @@ export class CatalogService {
     const track = parsed.data.results[0];
     if (!track) throw new BusinessError('TRACK_NOT_FOUND', 'Faixa não encontrada.');
     return mapTrack(track);
+  }
+
+  async searchArtists(query: CatalogArtistsQuery): Promise<ArtistSearchResult> {
+    const envelope = await this.client.get('artists', {
+      namesearch: query.q,
+      offset: query.offset,
+      limit: query.limit + 1,
+    });
+    const parsed = jamendoArtistEnvelopeSchema.safeParse(envelope);
+    if (!parsed.success) throw new JamendoResponseError(parsed.error);
+    return paginate(parsed.data.results.map(mapArtist), query.offset, query.limit);
+  }
+
+  async getArtistById(artistId: string): Promise<ArtistDto> {
+    const envelope = await this.client.get('artists', { id: artistId, limit: 1 });
+    const parsed = jamendoArtistEnvelopeSchema.safeParse(envelope);
+    if (!parsed.success) throw new JamendoResponseError(parsed.error);
+    const artist = parsed.data.results[0];
+    if (!artist) throw new BusinessError('ARTIST_NOT_FOUND', 'Artista não encontrado.');
+    return mapArtist(artist);
+  }
+
+  async searchAlbums(query: CatalogAlbumsQuery): Promise<AlbumSearchResult> {
+    const envelope = await this.client.get('albums', {
+      namesearch: query.q,
+      artist_id: query.artistId,
+      offset: query.offset,
+      limit: query.limit + 1,
+    });
+    const parsed = jamendoAlbumEnvelopeSchema.safeParse(envelope);
+    if (!parsed.success) throw new JamendoResponseError(parsed.error);
+    return paginate(parsed.data.results.map(mapAlbum), query.offset, query.limit);
+  }
+
+  async getAlbumById(albumId: string): Promise<AlbumDto> {
+    const envelope = await this.client.get('albums', { id: albumId, limit: 1 });
+    const parsed = jamendoAlbumEnvelopeSchema.safeParse(envelope);
+    if (!parsed.success) throw new JamendoResponseError(parsed.error);
+    const album = parsed.data.results[0];
+    if (!album) throw new BusinessError('ALBUM_NOT_FOUND', 'Álbum não encontrado.');
+    return mapAlbum(album);
   }
 }
 

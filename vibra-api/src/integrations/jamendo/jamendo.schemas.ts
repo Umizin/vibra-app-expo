@@ -69,4 +69,34 @@ export const jamendoTrackEnvelopeSchema = jamendoEnvelopeSchema.extend({
   results: z.array(jamendoTrackSchema),
 });
 
+export const jamendoArtistSchema = z.object({
+  id: externalIdSchema,
+  name: z.string().min(1),
+  website: optionalUrlSchema,
+  image: optionalUrlSchema,
+  shareurl: optionalUrlSchema,
+  shorturl: optionalUrlSchema,
+}).passthrough();
+
+export const jamendoArtistEnvelopeSchema = jamendoEnvelopeSchema.extend({
+  results: z.array(jamendoArtistSchema),
+});
+
+export const jamendoAlbumSchema = z.object({
+  id: externalIdSchema,
+  name: z.string().min(1),
+  artist_id: optionalExternalIdSchema,
+  artist_name: z.string().min(1),
+  image: optionalUrlSchema,
+  releasedate: optionalTextSchema,
+  shareurl: optionalUrlSchema,
+  shorturl: optionalUrlSchema,
+}).passthrough();
+
+export const jamendoAlbumEnvelopeSchema = jamendoEnvelopeSchema.extend({
+  results: z.array(jamendoAlbumSchema),
+});
+
 export type JamendoTrack = z.output<typeof jamendoTrackSchema>;
+export type JamendoArtist = z.output<typeof jamendoArtistSchema>;
+export type JamendoAlbum = z.output<typeof jamendoAlbumSchema>;

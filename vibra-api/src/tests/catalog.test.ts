@@ -13,7 +13,7 @@ import {
 } from '../integrations/jamendo/jamendo.errors.js';
 import type { JamendoEnvelope, JamendoQuery, JamendoResource } from '../integrations/jamendo/jamendo.types.js';
 import type { JamendoClient } from '../integrations/jamendo/jamendo.client.js';
-import type { CatalogTracksQuery } from '../schemas/catalog.schema.js';
+import type { CatalogAlbumsQuery, CatalogArtistsQuery, CatalogTracksQuery } from '../schemas/catalog.schema.js';
 import { CatalogService } from '../services/catalog.service.js';
 
 const trackOne = {
@@ -51,6 +51,27 @@ const defaultQuery: CatalogTracksQuery = {
   genre: undefined,
   offset: 0,
   limit: 20,
+};
+
+const defaultArtistsQuery: CatalogArtistsQuery = { q: undefined, offset: 0, limit: 20 };
+const defaultAlbumsQuery: CatalogAlbumsQuery = { q: undefined, artistId: undefined, offset: 0, limit: 20 };
+
+const artistOne = {
+  id: 123,
+  name: 'Artista de teste',
+  image: 'https://usercontent.jamendo.com/artist.jpg',
+  website: 'https://example.com',
+  shareurl: 'https://www.jamendo.com/artist/123',
+};
+
+const albumOne = {
+  id: 456,
+  name: 'Álbum de teste',
+  artist_id: 123,
+  artist_name: 'Artista de teste',
+  image: 'https://usercontent.jamendo.com/album.jpg',
+  releasedate: '2024-01-02',
+  shareurl: 'https://www.jamendo.com/list/a456',
 };
 
 test('busca por texto usando o parâmetro search da Jamendo', async () => {
@@ -196,11 +217,90 @@ test('preserva os dados públicos Jamendo permitidos no DTO e omite detalhes ext
   });
 });
 
+test('busca artistas por namesearch e pagina sem solicitar fullcount', async () => {
+  let resource: JamendoResource | undefined;
+  let received: JamendoQuery | undefined;
+  const service = new CatalogService(mockClient(async (requestedResource, query) => {
+    resource = requestedResource;
+    received = query;
+    return envelope([artistOne, { ...artistOne, id: '124' }, { ...artistOne, id: '125' }]);
+  }));
+  const result = await service.searchArtists({ ...defaultArtistsQuery, q: 'teste', offset: 5, limit: 2 });
+  assert.equal(resource, 'artists');
+  assert.equal(received?.namesearch, 'teste');
+  assert.equal(received?.offset, 5);
+  assert.equal(received?.limit, 3);
+  assert.equal(received?.fullcount, undefined);
+  assert.deepEqual(result.pagination, { offset: 5, limit: 2, count: 2, hasMore: true });
+  assert.equal(result.data[0]?.id, '123');
+});
+
+test('detalha artista por id e omite campos opcionais ausentes', async () => {
+  let received: JamendoQuery | undefined;
+  const service = new CatalogService(mockClient(async (_resource, query) => {
+    received = query;
+    return envelope([{ id: '987', name: 'Sem perfil' }]);
+  }));
+  assert.deepEqual(await service.getArtistById('987'), { id: '987', name: 'Sem perfil' });
+  assert.equal(received?.id, '987');
+});
+
+test('mapeia artista para o DTO Vibra sem repassar campos Jamendo extras', async () => {
+  const service = new CatalogService(mockClient(async () => envelope([{ ...artistOne, private_field: 'omit' }])));
+  assert.deepEqual(await service.getArtistById('123'), {
+    id: '123', name: 'Artista de teste', imageUrl: artistOne.image,
+    website: artistOne.website, shareUrl: artistOne.shareurl,
+  });
+});
+
+test('busca álbuns por namesearch e artist_id e mantém IDs como strings', async () => {
+  let received: JamendoQuery | undefined;
+  const service = new CatalogService(mockClient(async (_resource, query) => {
+    received = query;
+    return envelope([albumOne]);
+  }));
+  const result = await service.searchAlbums({ ...defaultAlbumsQuery, q: 'álbum', artistId: '123' });
+  assert.equal(received?.namesearch, 'álbum');
+  assert.equal(received?.artist_id, '123');
+  assert.equal(result.data[0]?.id, '456');
+  assert.equal(result.data[0]?.artistId, '123');
+});
+
+test('detalha álbum e preserva apenas campos documentados presentes', async () => {
+  const service = new CatalogService(mockClient(async () => envelope([{
+    id: '789', name: 'Single', artist_name: 'Artista',
+  }])));
+  assert.deepEqual(await service.getAlbumById('789'), {
+    id: '789', name: 'Single', artistName: 'Artista',
+  });
+});
+
+test('mapeia os campos públicos documentados do álbum', async () => {
+  const service = new CatalogService(mockClient(async () => envelope([{ ...albumOne, zip: 'omit' }])));
+  assert.deepEqual(await service.getAlbumById('456'), {
+    id: '456', name: 'Álbum de teste', artistId: '123', artistName: 'Artista de teste',
+    imageUrl: albumOne.image, releasedate: albumOne.releasedate, shareUrl: albumOne.shareurl,
+  });
+});
+
+test('retorna listas vazias, 404 para detalhes ausentes e rejeita resposta incompatível', async () => {
+  const emptyService = new CatalogService(mockClient(async () => envelope([])));
+  assert.deepEqual((await emptyService.searchArtists(defaultArtistsQuery)).pagination,
+    { offset: 0, limit: 20, count: 0, hasMore: false });
+  await assert.rejects(emptyService.getArtistById('1'),
+    (error: unknown) => error instanceof BusinessError && error.code === 'ARTIST_NOT_FOUND');
+  await assert.rejects(emptyService.getAlbumById('1'),
+    (error: unknown) => error instanceof BusinessError && error.code === 'ALBUM_NOT_FOUND');
+  const invalidService = new CatalogService(mockClient(async () => envelope([{ id: '2', name: 'Sem artista' }])));
+  await assert.rejects(invalidService.searchAlbums(defaultAlbumsQuery), JamendoResponseError);
+});
+
 const userId = 'a7ce72c6-30dd-4b36-a1cf-26e8a01eb1ab';
 let baseUrl = '';
 let server: Server;
 let catalogService: (typeof import('../services/catalog.service.js'))['catalogService'];
-let originals: Pick<typeof catalogService, 'searchTracks' | 'getTrackById'>;
+let originals: Pick<typeof catalogService,
+  'searchTracks' | 'getTrackById' | 'searchArtists' | 'getArtistById' | 'searchAlbums' | 'getAlbumById'>;
 let signAccessToken: (id: string) => Promise<string>;
 
 before(async () => {
@@ -215,6 +315,10 @@ before(async () => {
   originals = {
     searchTracks: catalogService.searchTracks,
     getTrackById: catalogService.getTrackById,
+    searchArtists: catalogService.searchArtists,
+    getArtistById: catalogService.getArtistById,
+    searchAlbums: catalogService.searchAlbums,
+    getAlbumById: catalogService.getAlbumById,
   };
   catalogService.searchTracks = async (query) => ({
     data: [{ id: '12345', titulo: query.q ?? 'Faixa', artistaId: '101', artista: 'Artista', duracaoEmSegundos: 213, tags: [] }],
@@ -224,6 +328,16 @@ before(async () => {
     if (trackId === '999') throw new BusinessError('TRACK_NOT_FOUND', 'Faixa não encontrada.');
     return { id: trackId, titulo: 'Faixa', artistaId: '101', artista: 'Artista', duracaoEmSegundos: 213, tags: [] };
   };
+  catalogService.searchArtists = async (query) => ({
+    data: [{ id: '123', name: query.q ?? 'Artista' }],
+    pagination: { offset: query.offset, limit: query.limit, count: 1, hasMore: false },
+  });
+  catalogService.getArtistById = async (artistId) => ({ id: artistId, name: 'Artista' });
+  catalogService.searchAlbums = async (query) => ({
+    data: [{ id: '456', name: query.q ?? 'Álbum', artistName: 'Artista' }],
+    pagination: { offset: query.offset, limit: query.limit, count: 1, hasMore: false },
+  });
+  catalogService.getAlbumById = async (albumId) => ({ id: albumId, name: 'Álbum', artistName: 'Artista' });
 
   const testApp = express();
   testApp.use(express.json());
@@ -307,6 +421,35 @@ test('converte erros da Jamendo em respostas seguras sem detalhes do provedor', 
     assert.equal((body?.error as { code: string }).code, code);
     assert.equal(JSON.stringify(body).includes(secret), false);
   }
+});
+
+test('rotas de artistas e álbuns exigem autenticação, validam IDs e mantêm envelope paginado', async () => {
+  for (const path of [
+    '/api/v1/catalog/artists', '/api/v1/catalog/artists/123',
+    '/api/v1/catalog/albums', '/api/v1/catalog/albums/456',
+  ]) {
+    const noAuth = await request(path);
+    assert.equal(noAuth.response.status, 401, path);
+  }
+  const token = await authorization();
+  const artists = await request('/api/v1/catalog/artists?q=nome&limit=3&offset=4', {
+    headers: { authorization: token },
+  });
+  assert.equal(artists.response.status, 200);
+  assert.deepEqual(artists.body?.pagination, { offset: 4, limit: 3, count: 1, hasMore: false });
+  const artist = await request('/api/v1/catalog/artists/123', { headers: { authorization: token } });
+  assert.equal((artist.body?.data as { id: string }).id, '123');
+
+  const albums = await request('/api/v1/catalog/albums?q=nome&artistId=123', { headers: { authorization: token } });
+  assert.equal(albums.response.status, 200);
+  assert.equal((albums.body?.data as Array<{ id: string }>)[0]?.id, '456');
+  const album = await request('/api/v1/catalog/albums/456', { headers: { authorization: token } });
+  assert.equal((album.body?.data as { id: string }).id, '456');
+
+  const invalidId = await request('/api/v1/catalog/albums/%20', { headers: { authorization: token } });
+  assert.equal(invalidId.response.status, 400);
+  const unknownQuery = await request('/api/v1/catalog/artists?unexpected=1', { headers: { authorization: token } });
+  assert.equal(unknownQuery.response.status, 400);
 });
 
 test('preserva GET /health', async () => {
