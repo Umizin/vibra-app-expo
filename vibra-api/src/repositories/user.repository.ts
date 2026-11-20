@@ -12,6 +12,17 @@ const profileSelect = {
 
 export type UserProfile = Prisma.UserGetPayload<{ select: typeof profileSelect }>;
 
+const authenticationSelect = {
+  id: true,
+  email: true,
+  displayName: true,
+  passwordHash: true,
+  createdAt: true,
+  updatedAt: true,
+} satisfies Prisma.UserSelect;
+
+export type UserForAuthentication = Prisma.UserGetPayload<{ select: typeof authenticationSelect }>;
+
 export interface CreateUserRepositoryInput {
   email: string;
   displayName: string;
@@ -37,6 +48,13 @@ export const userRepository = {
     return getPrismaClient().user.findUnique({
       where: { email: normalizeEmail(email) },
       select: profileSelect,
+    });
+  },
+
+  async findByEmailForAuthentication(email: string): Promise<UserForAuthentication | null> {
+    return getPrismaClient().user.findUnique({
+      where: { email: normalizeEmail(email) },
+      select: authenticationSelect,
     });
   },
 
