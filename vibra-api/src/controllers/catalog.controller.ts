@@ -21,7 +21,10 @@ export const searchTracksController: RequestHandler<
   ParsedQs,
   AuthenticatedLocals & ValidatedLocals<CatalogTracksQuery>
 > = async (_request, response) => {
-  const result = await catalogService.searchTracks(response.locals.validated);
+  const query = response.locals.validated;
+  const result = query.ids
+    ? await catalogService.getTracksByIds(query.ids)
+    : await catalogService.searchTracks(query);
   response.status(200).json(result);
 };
 

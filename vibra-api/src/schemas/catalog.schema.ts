@@ -27,13 +27,39 @@ const paginationSchema = {
   limit: z.coerce.number().int().min(1).max(50).default(20),
 };
 
+const trackPaginationSchema = {
+  offset: z.coerce.number().int().min(0).max(2_147_483_647).optional(),
+  limit: z.coerce.number().int().min(1).max(50).optional(),
+};
+
+const trackIdsSchema = z.string()
+  .transform((value) => value.split(',').map((id) => id.trim()))
+  .pipe(z.array(jamendoIdSchema).min(1, 'Informe ao menos um ID de faixa.').max(50, 'Informe no máximo 50 IDs de faixa.'))
+  .refine((ids) => new Set(ids).size === ids.length, 'Não informe IDs de faixa duplicados.');
+
 export const catalogTracksQuerySchema = z.object({
   q: searchTermSchema,
   artistId: jamendoIdSchema.optional(),
   albumId: jamendoIdSchema.optional(),
   genre: z.enum(vibraGenres).optional(),
-  ...paginationSchema,
-}).strict();
+  ids: trackIdsSchema.optional(),
+  ...trackPaginationSchema,
+}).strict()
+  .superRefine((query, context) => {
+    if (query.ids && (query.q || query.artistId || query.albumId || query.genre ||
+        query.offset !== undefined || query.limit !== undefined)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['ids'],
+        message: 'O parâmetro ids não pode ser combinado com busca, filtros ou paginação.',
+      });
+    }
+  })
+  .transform(({ offset, limit, ...query }) => ({
+    ...query,
+    offset: offset ?? 0,
+    limit: limit ?? 20,
+  }));
 
 export const catalogTrackParamsSchema = z.object({ trackId: jamendoIdSchema }).strict();
 

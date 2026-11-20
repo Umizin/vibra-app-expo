@@ -14,6 +14,7 @@ import {
 import type { JamendoEnvelope, JamendoQuery, JamendoResource } from '../integrations/jamendo/jamendo.types.js';
 import type { JamendoClient } from '../integrations/jamendo/jamendo.client.js';
 import type { CatalogAlbumsQuery, CatalogArtistsQuery, CatalogTracksQuery } from '../schemas/catalog.schema.js';
+import { catalogTracksQuerySchema } from '../schemas/catalog.schema.js';
 import { CatalogService } from '../services/catalog.service.js';
 
 const trackOne = {
@@ -192,6 +193,74 @@ test('retorna TRACK_NOT_FOUND quando Jamendo não encontra o ID', async () => {
   );
 });
 
+test('resolve um ou vários IDs Jamendo em uma única consulta e preserva strings e ordem solicitada', async () => {
+  let callCount = 0;
+  let received: JamendoQuery | undefined;
+  const service = new CatalogService(mockClient(async (resource, query) => {
+    callCount += 1;
+    assert.equal(resource, 'tracks');
+    received = query;
+    return envelope([
+      { ...trackOne, id: '98765432101234567890', name: 'Segunda' },
+      { ...trackOne, id: '12345', name: 'Primeira' },
+    ]);
+  }));
+
+  const single = await service.getTracksByIds(['12345']);
+  assert.deepEqual(received?.id, ['12345']);
+  assert.deepEqual(single.data.map((track) => track.id), ['12345']);
+
+  const ids = ['12345', '98765432101234567890'];
+  const result = await service.getTracksByIds(ids);
+  assert.equal(callCount, 2);
+  assert.deepEqual(received?.id, ids);
+  assert.deepEqual(received?.include, ['licenses', 'musicinfo']);
+  assert.equal(received?.limit, 2);
+  assert.equal(received?.fullcount, undefined);
+  assert.deepEqual(result.requestedIds, ids);
+  assert.deepEqual(result.missingIds, []);
+  assert.deepEqual(result.data.map((track) => track.id), ids);
+});
+
+test('retorna resultado parcial e IDs ausentes sem criar metadados artificiais', async () => {
+  const service = new CatalogService(mockClient(async () => envelope([trackOne])));
+  const result = await service.getTracksByIds(['12345', '999999', '999998']);
+  assert.deepEqual(result.data.map((track) => track.id), ['12345']);
+  assert.deepEqual(result.missingIds, ['999999', '999998']);
+  assert.deepEqual(result.requestedIds, ['12345', '999999', '999998']);
+  assert.equal((await new CatalogService(mockClient(async () => envelope([]))).getTracksByIds(['12345'])).data.length, 0);
+});
+
+test('rejeita resposta de faixa em lote inválida e propaga indisponibilidade do provedor', async () => {
+  const invalid = new CatalogService(mockClient(async () => envelope([{ id: '12', name: 'Sem artista' }])));
+  await assert.rejects(invalid.getTracksByIds(['12']), JamendoResponseError);
+
+  const unavailable = new CatalogService(mockClient(async () => {
+    throw new JamendoProviderUnavailableError(new Error('offline'));
+  }));
+  await assert.rejects(unavailable.getTracksByIds(['12']), JamendoProviderUnavailableError);
+});
+
+test('valida a lista ids e mantém os parâmetros antigos de busca separados', () => {
+  const validSingle = catalogTracksQuerySchema.safeParse({ ids: '12345' });
+  assert.equal(validSingle.success, true);
+  if (validSingle.success) assert.deepEqual(validSingle.data.ids, ['12345']);
+
+  const validMany = catalogTracksQuerySchema.safeParse({ ids: '12345,67890' });
+  assert.equal(validMany.success, true);
+  if (validMany.success) assert.deepEqual(validMany.data.ids, ['12345', '67890']);
+
+  for (const value of ['', '12345,', '12345,,67890', '12345,12345', 'x'.repeat(65)]) {
+    assert.equal(catalogTracksQuerySchema.safeParse({ ids: value }).success, false, value);
+  }
+  assert.equal(catalogTracksQuerySchema.safeParse({ ids: Array.from({ length: 51 }, (_, index) => String(index + 1)).join(',') }).success, false);
+  assert.equal(catalogTracksQuerySchema.safeParse({ ids: '12345', q: 'ambient' }).success, false);
+  assert.equal(catalogTracksQuerySchema.safeParse({ ids: '12345', limit: '10' }).success, false);
+
+  const oldSearch = catalogTracksQuerySchema.parse({ q: 'ambient', artistId: '101', albumId: '202', genre: 'Rock', offset: '3', limit: '4' });
+  assert.deepEqual(oldSearch, { q: 'ambient', artistId: '101', albumId: '202', genre: 'Rock', offset: 3, limit: 4 });
+});
+
 test('resposta Jamendo incompatível é rejeitada antes do mapeamento', async () => {
   const service = new CatalogService(mockClient(async () => envelope([{ id: '12', name: 'Sem artista' }])));
   await assert.rejects(service.searchTracks(defaultQuery), JamendoResponseError);
@@ -300,7 +369,7 @@ let baseUrl = '';
 let server: Server;
 let catalogService: (typeof import('../services/catalog.service.js'))['catalogService'];
 let originals: Pick<typeof catalogService,
-  'searchTracks' | 'getTrackById' | 'searchArtists' | 'getArtistById' | 'searchAlbums' | 'getAlbumById'>;
+  'searchTracks' | 'getTrackById' | 'getTracksByIds' | 'searchArtists' | 'getArtistById' | 'searchAlbums' | 'getAlbumById'>;
 let signAccessToken: (id: string) => Promise<string>;
 
 before(async () => {
@@ -315,6 +384,7 @@ before(async () => {
   originals = {
     searchTracks: catalogService.searchTracks,
     getTrackById: catalogService.getTrackById,
+    getTracksByIds: catalogService.getTracksByIds,
     searchArtists: catalogService.searchArtists,
     getArtistById: catalogService.getArtistById,
     searchAlbums: catalogService.searchAlbums,
@@ -327,6 +397,14 @@ before(async () => {
   catalogService.getTrackById = async (trackId) => {
     if (trackId === '999') throw new BusinessError('TRACK_NOT_FOUND', 'Faixa não encontrada.');
     return { id: trackId, titulo: 'Faixa', artistaId: '101', artista: 'Artista', duracaoEmSegundos: 213, tags: [] };
+  };
+  catalogService.getTracksByIds = async (ids) => {
+    const foundIds = ids.filter((id) => id !== '999');
+    return {
+      data: foundIds.map((id) => ({ id, titulo: `Faixa ${id}`, artistaId: '101', artista: 'Artista', duracaoEmSegundos: 213, tags: [] })),
+      requestedIds: ids,
+      missingIds: ids.filter((id) => id === '999'),
+    };
   };
   catalogService.searchArtists = async (query) => ({
     data: [{ id: '123', name: query.q ?? 'Artista' }],
@@ -375,6 +453,32 @@ test('GET /catalog/tracks exige autenticação e retorna resposta com paginaçã
   assert.equal(response.status, 200);
   assert.equal((body?.data as Array<{ titulo: string }>)[0]?.titulo, 'ambient');
   assert.deepEqual(body?.pagination, { offset: 8, limit: 4, count: 1, hasMore: false });
+});
+
+test('GET /catalog/tracks?ids resolve strings em lote, retorna ausentes e exige JWT', async () => {
+  const noAuth = await request('/api/v1/catalog/tracks?ids=12345,67890');
+  assert.equal(noAuth.response.status, 401);
+
+  const { response, body } = await request('/api/v1/catalog/tracks?ids=12345,999', {
+    headers: { authorization: await authorization() },
+  });
+  assert.equal(response.status, 200);
+  assert.deepEqual(body?.requestedIds, ['12345', '999']);
+  assert.deepEqual(body?.missingIds, ['999']);
+  assert.deepEqual((body?.data as Array<{ id: string }>).map((track) => track.id), ['12345']);
+});
+
+test('GET /catalog/tracks rejeita listas de IDs inválidas e combinação ambígua', async () => {
+  const token = await authorization();
+  const invalidIds = [
+    '?ids=', '?ids=12345,', '?ids=12345,,67890', '?ids=12345,12345',
+    `?ids=${Array.from({ length: 51 }, (_, index) => index + 1).join(',')}`,
+    `?ids=${'1'.repeat(65)}`, '?ids=12345&q=ambient', '?ids=12345&offset=0',
+  ];
+  for (const query of invalidIds) {
+    const { response } = await request(`/api/v1/catalog/tracks${query}`, { headers: { authorization: token } });
+    assert.equal(response.status, 400, query);
+  }
 });
 
 test('GET /catalog/tracks/:trackId exige autenticação e mapeia faixa inexistente para 404', async () => {
