@@ -307,7 +307,7 @@ export default function TelaDeDetalheDaPlaylist() {
               keyboardShouldPersistTaps="handled"
               onEndReached={() => void carregarMaisResultados()}
               onEndReachedThreshold={0.5}
-              ListFooterComponent={carregandoMais ? <ActivityIndicator color={cores.destaque} style={{ marginVertical: 16 }} /> : null}
+              ListFooterComponent={carregandoMais ? <ActivityIndicator color={cores.destaque} style={{ marginVertical: 16 }} /> : undefined}
               renderItem={({ item }) => {
                 const jaAdicionada = estado.faixas.some((faixa) => faixa.referencia.jamendoTrackId === item.id);
                 return (

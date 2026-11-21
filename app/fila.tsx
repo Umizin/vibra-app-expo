@@ -30,13 +30,13 @@ export default function TelaDaFila() {
         keyExtractor={(faixa) => faixa.id}
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: insets.bottom + 24 }}
         ListHeaderComponent={
-          faixaAtual && (
+          faixaAtual ? (
             <View style={estilos.secao}>
               <Text style={[estilos.rotulo, { color: cores.destaque }]}>Tocando agora</Text>
               <LinhaDeFaixa faixa={faixaAtual} aoPressionar={() => router.back()} />
               <Text style={[estilos.rotulo, { color: cores.textoSecundario, marginTop: 24 }]}>A seguir</Text>
             </View>
-          )
+          ) : undefined
         }
         renderItem={({ item }) => (
           <View style={estilos.linha}>

@@ -34,28 +34,28 @@ export default function LayoutDeAbas() {
           name="index"
           options={{
             title: 'Início',
-            tabBarIcon: ({ color, size }) => <Ionicons name="home" color={color} size={size} />,
+            tabBarIcon: ({ color, size }) => <Ionicons name="home" color={typeof color === 'number' ? cores.texto : color ?? cores.texto} size={size} />,
           }}
         />
         <Tabs.Screen
           name="buscar"
           options={{
             title: 'Buscar',
-            tabBarIcon: ({ color, size }) => <Ionicons name="search" color={color} size={size} />,
+            tabBarIcon: ({ color, size }) => <Ionicons name="search" color={typeof color === 'number' ? cores.texto : color ?? cores.texto} size={size} />,
           }}
         />
         <Tabs.Screen
           name="biblioteca"
           options={{
             title: 'Biblioteca',
-            tabBarIcon: ({ color, size }) => <Ionicons name="library" color={color} size={size} />,
+            tabBarIcon: ({ color, size }) => <Ionicons name="library" color={typeof color === 'number' ? cores.texto : color ?? cores.texto} size={size} />,
           }}
         />
         <Tabs.Screen
           name="perfil"
           options={{
             title: 'Perfil',
-            tabBarIcon: ({ color, size }) => <Ionicons name="person" color={color} size={size} />,
+            tabBarIcon: ({ color, size }) => <Ionicons name="person" color={typeof color === 'number' ? cores.texto : color ?? cores.texto} size={size} />,
           }}
         />
       </Tabs>

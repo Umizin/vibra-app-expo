@@ -157,7 +157,7 @@ export default function TelaDeBiblioteca() {
           data={estado.playlists}
           keyExtractor={(playlist) => playlist.id}
           contentContainerStyle={{ paddingBottom: 140, flexGrow: 1 }}
-          ListEmptyComponent={estado.erro ? null : (
+          ListEmptyComponent={estado.erro ? undefined : (
             <View style={estilos.vazio}>
               <Ionicons name="musical-notes-outline" size={34} color={cores.textoSecundario} />
               <Text style={[estilos.vazioTitulo, { color: cores.texto }]}>Sua biblioteca começa aqui</Text>

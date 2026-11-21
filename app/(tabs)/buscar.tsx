@@ -173,7 +173,7 @@ export default function TelaDeBusca() {
             <Text style={[estilos.estado, { color: cores.perigo }]}>{erro}</Text>
           ) : carregandoMais ? (
             <ActivityIndicator color={cores.destaque} style={{ marginVertical: 20 }} />
-          ) : null}
+          ) : undefined}
         />
       )}
     </View>
