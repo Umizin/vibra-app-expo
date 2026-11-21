@@ -41,6 +41,15 @@ const optionalUrlSchema = z
   .optional()
   .transform((value) => value === undefined || value === null || value === '' ? undefined : value);
 
+const optionalHttpUrlSchema = z
+  .union([
+    z.string().url().refine((value) => /^https?:\/\//i.test(value)),
+    z.literal(''),
+    z.null(),
+  ])
+  .optional()
+  .transform((value) => value === undefined || value === null || value === '' ? undefined : value);
+
 const jamendoMusicInfoSchema = z.object({
   tags: z.object({
     genres: z.array(z.string()).nullable().optional(),
@@ -72,7 +81,7 @@ export const jamendoTrackEnvelopeSchema = jamendoEnvelopeSchema.extend({
 export const jamendoArtistSchema = z.object({
   id: externalIdSchema,
   name: z.string().min(1),
-  website: optionalUrlSchema,
+  website: optionalHttpUrlSchema,
   image: optionalUrlSchema,
   shareurl: optionalUrlSchema,
   shorturl: optionalUrlSchema,

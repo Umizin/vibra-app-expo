@@ -11,6 +11,7 @@ import {
   JamendoResponseError,
   JamendoTimeoutError,
 } from '../integrations/jamendo/jamendo.errors.js';
+import { jamendoArtistSchema } from '../integrations/jamendo/jamendo.schemas.js';
 import type { JamendoEnvelope, JamendoQuery, JamendoResource } from '../integrations/jamendo/jamendo.types.js';
 import type { JamendoClient } from '../integrations/jamendo/jamendo.client.js';
 import type { CatalogAlbumsQuery, CatalogArtistsQuery, CatalogTracksQuery } from '../schemas/catalog.schema.js';
@@ -74,6 +75,21 @@ const albumOne = {
   releasedate: '2024-01-02',
   shareurl: 'https://www.jamendo.com/list/a456',
 };
+
+test('schema de artista aceita website HTTP ou HTTPS e mantém opcionais vazios', () => {
+  const base = { id: '123', name: 'Artista' };
+  assert.equal(jamendoArtistSchema.parse({ ...base, website: 'https://example.com' }).website, 'https://example.com');
+  assert.equal(jamendoArtistSchema.parse({ ...base, website: 'http://www.triface.net/' }).website, 'http://www.triface.net/');
+  assert.equal(jamendoArtistSchema.parse({ ...base, website: '' }).website, undefined);
+  assert.equal(jamendoArtistSchema.parse({ ...base, website: null }).website, undefined);
+  assert.equal(jamendoArtistSchema.parse(base).website, undefined);
+
+  for (const website of ['invalid-url', 'ftp://example.com', 'javascript:alert(1)']) {
+    assert.equal(jamendoArtistSchema.safeParse({ ...base, website }).success, false, website);
+  }
+
+  assert.equal(jamendoArtistSchema.safeParse({ ...base, image: 'http://example.com/artist.jpg' }).success, false);
+});
 
 test('busca por texto usando o parâmetro search da Jamendo', async () => {
   let received: JamendoQuery | undefined;

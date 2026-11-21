@@ -14,6 +14,7 @@
     "test": "node --import tsx --import ./src/tests/setup.ts --test src/tests/*.test.ts",
     "prisma:validate": "prisma validate",
     "prisma:generate": "prisma generate",
+    "prisma:migrate:deploy": "prisma migrate deploy",
     "db:check": "tsx src/scripts/check-database.ts"
   },
   "dependencies": {
