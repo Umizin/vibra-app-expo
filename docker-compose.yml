@@ -1,0 +1,51 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-vibra}
+      POSTGRES_USER: ${POSTGRES_USER:-vibra}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Configure POSTGRES_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 5s
+
+  migrate:
+    build:
+      context: .
+      dockerfile: vibra-api/Dockerfile
+      target: migrate
+    environment: &api_environment
+      NODE_ENV: production
+      PORT: "3001"
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:8081}
+      DATABASE_URL: ${DATABASE_URL:?Configure DATABASE_URL with host postgres in .env}
+      JWT_SECRET: ${JWT_SECRET:?Configure JWT_SECRET in .env}
+      JAMENDO_CLIENT_ID: ${JAMENDO_CLIENT_ID:-YOUR_JAMENDO_CLIENT_ID}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build:
+      context: .
+      dockerfile: vibra-api/Dockerfile
+      target: runtime
+    restart: unless-stopped
+    environment: *api_environment
+    ports:
+      - "${API_PORT:-3001}:3001"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  postgres_data:

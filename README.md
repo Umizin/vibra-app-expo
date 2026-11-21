@@ -1,109 +1,128 @@
 # Vibra
 
-App de descoberta e streaming musical, feito em React Native + Expo Router como
-atividade da disciplina de Aplicativos Híbridos.
+Aplicativo acadêmico de descoberta e reprodução musical com identidade visual própria. O app usa Expo/React Native; a API própria em Node.js/Express intermedeia autenticação, persistência PostgreSQL/Prisma e consultas ao catálogo Jamendo.
 
-## Rodando o projeto
+## Arquitetura e tecnologias
 
-```bash
-npm install
-npx expo start
+```text
+Expo / React Native → Vibra API (Express / TypeScript) → PostgreSQL e Jamendo API v3
 ```
 
-Escaneie o QR code com o app Expo Go (Android) ou a câmera (iOS).
+O frontend não chama a Jamendo. O backend mantém o `JAMENDO_CLIENT_ID`; tokens JWT são emitidos pela API. A API usa Prisma ORM 7 e migrations versionadas. A disponibilidade de reprodução depende das URLs fornecidas pelo catálogo.
 
-Configure a URL da API em `.env` antes de iniciar o Expo. O cadastro e o login são realizados pela Vibra API.
+## Pré-requisitos
 
-## Arquitetura
+- Git e Node.js 24 (frontend e execução local da API).
+- Docker Engine e Docker Compose v2 para executar PostgreSQL e API em containers.
+- Expo Go compatível com SDK 58 para testar em dispositivo ou emulador; ou navegador para Expo Web.
 
-O projeto segue a separação em camadas vista em aula:
+Referências: [Expo SDK 58](https://docs.expo.dev/versions/v58.0.0/), [Expo Go](https://docs.expo.dev/get-started/expo-go/), [Docker Compose](https://docs.docker.com/compose/), [Prisma 7](https://www.prisma.io/docs/orm), [Jamendo API v3](https://developer.jamendo.com/v3.0).
 
-- **Apresentação** — `app/` (rotas do Expo Router) e `src/components/`
-- **Estado** — `src/contexts/` (Context API): sessão, tema, favoritos e player
-- **Dados** — `src/services/api.ts` concentra as chamadas HTTP à Vibra API; os serviços de autenticação e catálogo adaptam os DTOs recebidos para os modelos usados pela interface.
+## Credenciais e ambiente
 
-O JWT é guardado no `expo-secure-store` em Android/iOS e enviado apenas em chamadas protegidas. Na web, ele fica em `sessionStorage` durante a sessão atual do navegador. Senhas não são persistidas.
-
-## Frontend e Vibra API
-
-Crie `.env` na raiz a partir do exemplo e configure `EXPO_PUBLIC_API_URL`:
+Na raiz, crie o arquivo local ignorado pelo Git:
 
 ```bash
 cp .env.example .env
 ```
 
-- Android Emulator: `http://10.0.2.2:3001`;
-- iOS Simulator ou navegador no mesmo computador da API: `http://localhost:3001`;
-- dispositivo físico: use o IP local (LAN) do computador que executa a API.
+Edite `.env`: configure `POSTGRES_PASSWORD` (uma senha hexadecimal pode ser gerada com `openssl rand -hex 16`) e use a mesma senha na `DATABASE_URL`; gere `JWT_SECRET` com `openssl rand -hex 32`. O exemplo tem somente placeholders. Não compartilhe nem versione `.env`.
 
-Inicie a API em `vibra-api/` (`npm run dev`) e depois o aplicativo (`npx expo start`). Reinicie o Expo depois de alterar a variável de ambiente. A aplicação reporta uma mensagem de configuração se a URL estiver ausente. Em web, configure também `FRONTEND_ORIGIN` no ambiente do backend para corresponder à origem do Expo Web. Não coloque o `JAMENDO_CLIENT_ID` no frontend.
+Obtenha um `client_id` no [portal de desenvolvedores Jamendo](https://developer.jamendo.com/v3.0). Configure-o em `JAMENDO_CLIENT_ID` no `.env` raiz para o Compose. Para execução local da API, crie também `vibra-api/.env` com base em `vibra-api/.env.example`; nessa configuração `DATABASE_URL` aponta para `localhost:5432` se o PostgreSQL local estiver publicado nessa porta. O arquivo local da API também não deve ser versionado.
 
-A tela Buscar e as seções de faixas/álbuns da Home utilizam o catálogo real da API. As playlists, favoritos, histórico e algumas experiências de descoberta ainda usam dados/estado local e serão integrados em etapas posteriores. A busca filtra gêneros somente quando há um filtro suportado pelo backend (Rock, Pop e Eletrônica); os demais não geram resultados locais de fallback.
+## Iniciar PostgreSQL e API com Docker
 
-Os testes do cliente e dos serviços do frontend podem ser executados com o runner `tsx` já usado pelo backend (sem instalar dependências na raiz):
+Na raiz do projeto:
 
 ```bash
-node --import ./vibra-api/node_modules/tsx/dist/loader.mjs src/tests/frontend-api.test.ts
+docker compose config
+docker compose up --build -d
+docker compose ps
+docker compose logs -f api
 ```
 
-## Telas
+O Compose cria o serviço `postgres`, espera o healthcheck e executa `prisma migrate deploy` em um serviço de migração único antes de iniciar a API. O PostgreSQL guarda os dados no volume nomeado `postgres_data`; sua porta fica publicada somente em `127.0.0.1:5433` para evitar conflito com instalações locais. A API fica em `http://localhost:3001`.
 
-Login, Início, Buscar, Biblioteca, Perfil, Detalhe de playlist/álbum, Músicas Curtidas e Player.
+Para confirmar banco e API:
 
-## Backend (`vibra-api/`)
+```bash
+curl -i http://localhost:3001/health
+docker compose exec postgres pg_isready -U vibra -d vibra
+docker compose run --rm migrate npm run db:check
+```
 
-### Tecnologias
+Para parar os serviços mantendo os dados: `docker compose down`. **Não use `docker compose down -v`** salvo se quiser apagar permanentemente os dados do volume do Vibra. O volume do Compose é separado de volumes gerenciados por Podman.
 
-- Node.js 24 e Express 5;
-- TypeScript em modo estrito, com módulos ES para Node.js;
-- Zod para validar a configuração do processo;
-- Helmet para cabeçalhos HTTP e CORS limitado à origem configurada;
-- `dotenv` para carregar o `.env` local;
-- `tsx` para executar e observar o código TypeScript durante o desenvolvimento.
+## Executar o frontend
 
-### Camadas
+O Expo Go e o servidor de desenvolvimento devem rodar no computador/dispositivo, fora do Docker. Defina `EXPO_PUBLIC_API_URL` no `.env` raiz conforme o ambiente e reinicie o Expo após alterar:
 
-- `src/routes/` registra os endpoints;
-- `src/controllers/` converte requisições HTTP em respostas;
-- `src/services/` contém regras de negócio e integração com a Jamendo;
-- `src/repositories/` contém acesso ao PostgreSQL via Prisma;
-- `src/middlewares/` contém tratamento transversal de rotas e erros;
-- `src/config/` valida as variáveis de ambiente;
-- `src/database/` centraliza a conexão Prisma; `prisma/` contém o schema e as migrations;
-- `src/schemas/`, `src/types/` e `src/errors/` contêm validações, contratos e erros de domínio.
+| Cliente Expo | URL da API |
+| --- | --- |
+| Navegador no mesmo computador / simulador iOS | `http://localhost:3001` |
+| Emulador Android padrão | `http://10.0.2.2:3001` |
+| Celular físico | `http://IP-LAN-DO-COMPUTADOR:3001` |
 
-O backend já implementa autenticação JWT, perfil, operações de playlists/faixas/favoritos e consulta autenticada do catálogo de faixas, artistas e álbuns Jamendo.
+No navegador, a origem permitida no backend é `FRONTEND_ORIGIN` (padrão `http://localhost:8081`). Para dispositivo físico, use um endereço IP alcançável na rede; confirme também as regras de firewall. A porta da API precisa estar acessível na rede local.
 
-### Configuração local
+```bash
+npm ci
+npx expo start
+```
 
-Na pasta `vibra-api/`, copie `.env.example` para `.env` e ajuste os valores locais. O arquivo `.env` não deve ser versionado. A API usa PostgreSQL por meio de `DATABASE_URL`; `JWT_SECRET` deve conter pelo menos 32 bytes e `JAMENDO_CLIENT_ID` é necessário para chamadas ao catálogo.
+Use `w` para abrir a versão web ou escaneie o QR code no Expo Go. O projeto está alinhado ao Expo SDK 58; mantenha o Expo Go atualizado para essa versão do SDK. A exportação web usa saída SPA (`single`), sem prerender no servidor, e rotas profundas precisam de fallback para `index.html` no host estático.
 
-### Instalação e execução
+## Cadastro, login e API
+
+Cadastre uma conta (use dados de teste):
+
+```bash
+curl -sS -X POST http://localhost:3001/api/v1/auth/register \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"dev@example.test","displayName":"Dev Vibra","password":"senha-de-teste-123"}'
+```
+
+Ou faça login e extraia o token com `jq`:
+
+```bash
+TOKEN=$(curl -sS -X POST http://localhost:3001/api/v1/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"dev@example.test","password":"senha-de-teste-123"}' | jq -r '.data.accessToken')
+curl -sS http://localhost:3001/api/v1/users/me -H "Authorization: Bearer $TOKEN"
+```
+
+Rotas efetivamente registradas (rotas de usuário, catálogo, playlists e favoritos exigem `Authorization: Bearer <token>`):
+
+- `GET /health`
+- `POST /api/v1/auth/register`, `POST /api/v1/auth/login`
+- `GET /api/v1/users/me`, `PATCH /api/v1/users/me`
+- `GET /api/v1/catalog/tracks` (inclui consulta por `ids`), `GET /api/v1/catalog/tracks/:trackId`
+- `GET /api/v1/catalog/artists`, `GET /api/v1/catalog/artists/:artistId`
+- `GET /api/v1/catalog/albums`, `GET /api/v1/catalog/albums/:albumId`
+- `GET /api/v1/me/playlists`, `POST /api/v1/me/playlists`
+- `GET /api/v1/playlists/:playlistId`, `PATCH /api/v1/playlists/:playlistId`, `DELETE /api/v1/playlists/:playlistId`
+- `GET|POST /api/v1/playlists/:playlistId/tracks`; `GET|DELETE /api/v1/playlists/:playlistId/tracks/:jamendoTrackId`
+- `GET|POST /api/v1/me/favorites`; `GET|DELETE /api/v1/me/favorites/:jamendoTrackId`
+
+Exemplo autenticado para consulta de catálogo: `curl -sS 'http://localhost:3001/api/v1/catalog/tracks?q=jazz&limit=10' -H "Authorization: Bearer $TOKEN"`. O catálogo exige `JAMENDO_CLIENT_ID` configurado no backend.
+
+## Verificações de desenvolvimento
+
+Frontend, na raiz:
+
+```bash
+npx tsc --noEmit
+npx expo export --platform web
+node --test --import ./vibra-api/node_modules/tsx/dist/loader.mjs src/tests/*.test.ts
+```
+
+API, em outro terminal:
 
 ```bash
 cd vibra-api
-npm install
-npm run dev
-```
-
-Para compilar e executar a versão compilada:
-
-```bash
+npm ci
+npm test
+npm run typecheck
 npm run build
-npm start
+npm run prisma:validate
 ```
-
-O TypeScript compilado é gravado em `dist/`, que não deve ser commitado.
-
-### Endpoint disponível
-
-`GET /health` retorna `200` com:
-
-```json
-{
-  "status": "ok",
-  "service": "vibra-api"
-}
-```
-
-As rotas REST incluem `/api/v1/auth`, `/api/v1/users/me`, `/api/v1/catalog` e recursos de playlists/favoritos. Rotas de catálogo e recursos de usuário exigem JWT. Erros são tratados centralmente e não expõem detalhes internos ao cliente.
