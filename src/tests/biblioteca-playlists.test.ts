@@ -40,6 +40,7 @@ test('Biblioteca expõe carregamento, lista vazia, erro e nova tentativa', async
     },
   });
   const manager = criarGerenciadorBibliotecaPlaylists(service);
+  manager.selecionarUsuario('user-1');
 
   const firstLoad = manager.carregar();
   assert.equal(manager.obterEstado().carregando, true);
@@ -72,6 +73,7 @@ test('criação insere a playlist na lista e impede envio duplicado', async () =
     },
   });
   const manager = criarGerenciadorBibliotecaPlaylists(service);
+  manager.selecionarUsuario('user-1');
   await manager.carregar();
   const firstCreate = manager.criar({ name: playlist.name });
   assert.equal(manager.obterEstado().processando, true);
@@ -92,6 +94,7 @@ test('edição atualiza a lista e envia null para limpar a descrição', async (
     },
   });
   const manager = criarGerenciadorBibliotecaPlaylists(service);
+  manager.selecionarUsuario('user-1');
   await manager.carregar();
   const updated = await manager.atualizar(playlist.id, { name: 'Renomeada', description: null });
   assert.deepEqual(calls.update, [{ id: playlist.id, data: { name: 'Renomeada', description: null } }]);
@@ -102,6 +105,7 @@ test('edição atualiza a lista e envia null para limpar a descrição', async (
 test('exclusão só ocorre após confirmação e remove o item da lista', async () => {
   const { service, calls } = mockService({ listarPlaylists: async () => [playlist] });
   const manager = criarGerenciadorBibliotecaPlaylists(service);
+  manager.selecionarUsuario('user-1');
   await manager.carregar();
   const operation = () => manager.excluir(playlist.id);
 
@@ -110,4 +114,27 @@ test('exclusão só ocorre após confirmação e remove o item da lista', async 
   assert.equal(await executarSeConfirmado(async () => true, operation), true);
   assert.deepEqual(calls.delete, [playlist.id]);
   assert.deepEqual(manager.obterEstado().playlists, []);
+});
+
+test('trocar de usuário limpa playlists antigas e ignora resposta pendente da sessão anterior', async () => {
+  let responderPrimeiraLista;
+  let chamada = 0;
+  const service = mockService({
+    listarPlaylists: async () => {
+      chamada += 1;
+      if (chamada === 1) return new Promise((resolve) => { responderPrimeiraLista = resolve; });
+      return [];
+    },
+  }).service;
+  const manager = criarGerenciadorBibliotecaPlaylists(service);
+
+  manager.selecionarUsuario('user-1');
+  const primeiraCarga = manager.carregar();
+  manager.selecionarUsuario('user-2');
+  await manager.carregar();
+  responderPrimeiraLista([playlist]);
+  await primeiraCarga;
+
+  assert.deepEqual(manager.obterEstado().playlists, []);
+  assert.equal(manager.obterEstado().carregando, false);
 });

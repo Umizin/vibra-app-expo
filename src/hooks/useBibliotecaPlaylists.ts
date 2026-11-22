@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 
+import { useAuth } from '@/contexts/AuthContext';
 import { ApiClientError } from '@/services/api';
 import { playlistService } from '@/services/playlistService';
 import type { AtualizarPlaylistInput, CriarPlaylistInput, PlaylistPersistida } from '@/types/modelos';
@@ -40,6 +41,8 @@ export function criarGerenciadorBibliotecaPlaylists(service: PlaylistService = p
     erro: null,
   };
   let promiseDeCarga: Promise<void> | null = null;
+  let usuarioAtual: string | null = null;
+  let versaoSessao = 0;
   const ouvintes = new Set<(estado: EstadoBibliotecaPlaylists) => void>();
 
   function publicar(novoEstado: EstadoBibliotecaPlaylists) {
@@ -49,16 +52,23 @@ export function criarGerenciadorBibliotecaPlaylists(service: PlaylistService = p
 
   function carregar(): Promise<void> {
     if (promiseDeCarga) return promiseDeCarga;
+    const versaoAtual = versaoSessao;
     publicar({ ...estado, carregando: true, erro: null });
     promiseDeCarga = service.listarPlaylists()
-      .then((playlists) => publicar({ ...estado, playlists, erro: null }))
-      .catch((error: unknown) => publicar({
-        ...estado,
-        erro: error instanceof Error ? error.message : 'Não foi possível carregar suas playlists.',
-      }))
+      .then((playlists) => {
+        if (versaoAtual === versaoSessao) publicar({ ...estado, playlists, erro: null });
+      })
+      .catch((error: unknown) => {
+        if (versaoAtual === versaoSessao) publicar({
+          ...estado,
+          erro: error instanceof Error ? error.message : 'Não foi possível carregar suas playlists.',
+        });
+      })
       .finally(() => {
-        promiseDeCarga = null;
-        publicar({ ...estado, carregando: false });
+        if (versaoAtual === versaoSessao) {
+          promiseDeCarga = null;
+          publicar({ ...estado, carregando: false });
+        }
       });
     return promiseDeCarga;
   }
@@ -70,43 +80,59 @@ export function criarGerenciadorBibliotecaPlaylists(service: PlaylistService = p
       return () => { ouvintes.delete(ouvinte); };
     },
     carregar,
+    selecionarUsuario(userId: string | null) {
+      if (usuarioAtual === userId) return;
+      usuarioAtual = userId;
+      versaoSessao += 1;
+      promiseDeCarga = null;
+      publicar({ playlists: [], carregando: Boolean(userId), processando: false, erro: null });
+    },
     async criar(dados: CriarPlaylistInput): Promise<PlaylistPersistida | null> {
-      if (estado.processando || estado.carregando) return null;
+      if (!usuarioAtual || estado.processando || estado.carregando) return null;
+      const versaoAtual = versaoSessao;
       publicar({ ...estado, processando: true });
       try {
         const criada = await service.criarPlaylist(dados);
-        publicar({ ...estado, playlists: [criada, ...estado.playlists.filter((item) => item.id !== criada.id)] });
+        if (versaoAtual === versaoSessao) {
+          publicar({ ...estado, playlists: [criada, ...estado.playlists.filter((item) => item.id !== criada.id)] });
+        }
         return criada;
       } finally {
-        publicar({ ...estado, processando: false });
+        if (versaoAtual === versaoSessao) publicar({ ...estado, processando: false });
       }
     },
     async atualizar(id: string, dados: AtualizarPlaylistInput): Promise<PlaylistPersistida | null> {
-      if (estado.processando || estado.carregando) return null;
+      if (!usuarioAtual || estado.processando || estado.carregando) return null;
+      const versaoAtual = versaoSessao;
       publicar({ ...estado, processando: true });
       try {
         const atualizada = await service.atualizarPlaylist(id, dados);
-        publicar({ ...estado, playlists: estado.playlists.map((item) => item.id === id ? atualizada : item) });
+        if (versaoAtual === versaoSessao) {
+          publicar({ ...estado, playlists: estado.playlists.map((item) => item.id === id ? atualizada : item) });
+        }
         return atualizada;
       } catch (error) {
-        if (error instanceof ApiClientError && error.status === 404) await carregar();
+        if (versaoAtual === versaoSessao && error instanceof ApiClientError && error.status === 404) await carregar();
         throw error;
       } finally {
-        publicar({ ...estado, processando: false });
+        if (versaoAtual === versaoSessao) publicar({ ...estado, processando: false });
       }
     },
     async excluir(id: string): Promise<boolean> {
-      if (estado.processando || estado.carregando) return false;
+      if (!usuarioAtual || estado.processando || estado.carregando) return false;
+      const versaoAtual = versaoSessao;
       publicar({ ...estado, processando: true });
       try {
         await service.excluirPlaylist(id);
-        publicar({ ...estado, playlists: estado.playlists.filter((item) => item.id !== id) });
+        if (versaoAtual === versaoSessao) {
+          publicar({ ...estado, playlists: estado.playlists.filter((item) => item.id !== id) });
+        }
         return true;
       } catch (error) {
-        if (error instanceof ApiClientError && error.status === 404) await carregar();
+        if (versaoAtual === versaoSessao && error instanceof ApiClientError && error.status === 404) await carregar();
         throw error;
       } finally {
-        publicar({ ...estado, processando: false });
+        if (versaoAtual === versaoSessao) publicar({ ...estado, processando: false });
       }
     },
   };
@@ -115,16 +141,25 @@ export function criarGerenciadorBibliotecaPlaylists(service: PlaylistService = p
 const gerenciador = criarGerenciadorBibliotecaPlaylists();
 
 export function useBibliotecaPlaylists() {
+  const { usuario } = useAuth();
+  const usuarioId = usuario?.id ?? null;
+  const [usuarioIdDoEstado, setUsuarioIdDoEstado] = useState(usuarioId);
   const [estado, setEstado] = useState(gerenciador.obterEstado());
 
   useEffect(() => {
     const pararDeObservar = gerenciador.observar(setEstado);
-    void gerenciador.carregar();
+    gerenciador.selecionarUsuario(usuarioId);
+    setUsuarioIdDoEstado(usuarioId);
+    if (usuario) void gerenciador.carregar();
     return pararDeObservar;
-  }, []);
+  }, [usuarioId]);
+
+  const estadoAtual = usuarioIdDoEstado === usuarioId
+    ? estado
+    : { playlists: [], carregando: Boolean(usuarioId), processando: false, erro: null };
 
   return {
-    estado,
+    estado: estadoAtual,
     carregar: gerenciador.carregar,
     criar: gerenciador.criar,
     atualizar: gerenciador.atualizar,

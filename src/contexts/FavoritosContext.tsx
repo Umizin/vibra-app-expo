@@ -50,6 +50,7 @@ export function FavoritosProvider({ children }: { children: ReactNode }) {
   async function alternarFavorito(idDaFaixa: string) {
     if (emAndamento.current.has(idDaFaixa)) return;
     emAndamento.current.add(idDaFaixa);
+    setErro(null);
 
     const usuarioInicial = usuario?.id;
     const eraFavorita = idsFavoritos.includes(idDaFaixa);
@@ -59,7 +60,10 @@ export function FavoritosProvider({ children }: { children: ReactNode }) {
       else await favoritoService.adicionar(idDaFaixa);
     } catch (e) {
       const jaNoEstadoDesejado = e instanceof ApiClientError && e.status === (eraFavorita ? 404 : 409);
-      if (!jaNoEstadoDesejado && usuarioAtual.current === usuarioInicial) aplicar(idDaFaixa, eraFavorita);
+      if (!jaNoEstadoDesejado && usuarioAtual.current === usuarioInicial) {
+        aplicar(idDaFaixa, eraFavorita);
+        setErro(e instanceof Error ? e.message : 'Não foi possível atualizar seus favoritos.');
+      }
     } finally {
       emAndamento.current.delete(idDaFaixa);
     }

@@ -9,6 +9,7 @@ import { usePlayer } from '@/contexts/PlayerContext';
 import { useTema } from '@/contexts/TemaContext';
 import { useRequisicao } from '@/hooks/useRequisicao';
 import { catalogoService } from '@/services/catalogoService';
+import { voltarOuIrPara } from '@/utils/navegacao';
 
 export default function TelaDeFavoritas() {
   const { cores } = useTema();
@@ -17,7 +18,8 @@ export default function TelaDeFavoritas() {
   const { idsFavoritos, carregando: carregandoIds, erro: erroIds } = useFavoritos();
   const { tocarFaixa } = usePlayer();
 
-  const faixas = useRequisicao(() => catalogoService.buscarFaixasEmLotes(idsFavoritos), [carregandoIds]);
+  const chaveFavoritos = idsFavoritos.join('\u0000');
+  const faixas = useRequisicao(() => catalogoService.buscarFaixasEmLotes(idsFavoritos), [carregandoIds, chaveFavoritos]);
   const faixasFavoritas = (faixas.dado ?? []).filter((faixa) => idsFavoritos.includes(faixa.id));
   const carregando = carregandoIds || (faixas.carregando && !faixas.dado);
   const erro = erroIds ?? faixas.erro;
@@ -25,7 +27,7 @@ export default function TelaDeFavoritas() {
   return (
     <View style={[estilos.container, { backgroundColor: cores.fundo, paddingTop: insets.top + 12 }]}>
       <View style={estilos.cabecalho}>
-        <Pressable onPress={() => router.back()} hitSlop={12}>
+        <Pressable onPress={() => voltarOuIrPara(router, '/(tabs)/biblioteca')} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={cores.texto} />
         </Pressable>
         <Text style={[estilos.titulo, { color: cores.texto }]}>Músicas Curtidas</Text>
