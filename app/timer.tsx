@@ -8,6 +8,7 @@ import { BotaoPrimario } from '@/components/BotaoPrimario';
 import { useTema } from '@/contexts/TemaContext';
 import { useTimer } from '@/contexts/TimerContext';
 import { formatarDuracao } from '@/utils/formatarDuracao';
+import { voltarOuIrPara } from '@/utils/navegacao';
 
 const OPCOES_EM_MINUTOS = [5, 15, 30, 45, 60];
 
@@ -28,7 +29,7 @@ export default function TelaDoTimer() {
 
   return (
     <View style={[estilos.container, { backgroundColor: cores.fundo, paddingTop: insets.top + 12 }]}>
-      <Pressable onPress={() => router.back()} hitSlop={12}>
+      <Pressable onPress={() => voltarOuIrPara(router, '/(tabs)')} hitSlop={12}>
         <Ionicons name="chevron-down" size={28} color={cores.texto} />
       </Pressable>
 

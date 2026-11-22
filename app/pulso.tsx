@@ -10,6 +10,7 @@ import { useTema } from '@/contexts/TemaContext';
 import { useRequisicao } from '@/hooks/useRequisicao';
 import { historicoService } from '@/services/historicoService';
 import { calcularPulso } from '@/utils/calcularPulso';
+import { voltarOuIrPara } from '@/utils/navegacao';
 
 export default function TelaDoPulso() {
   const { cores } = useTema();
@@ -35,7 +36,7 @@ export default function TelaDoPulso() {
       contentContainerStyle={{ paddingTop: insets.top + 12, paddingBottom: insets.bottom + 40, paddingHorizontal: 16 }}
     >
       <View style={estilos.cabecalho}>
-        <Pressable onPress={() => router.back()} hitSlop={12}>
+        <Pressable onPress={() => voltarOuIrPara(router, '/(tabs)/perfil')} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={cores.texto} />
         </Pressable>
         <Text style={[estilos.titulo, { color: cores.texto }]}>Seu Pulso</Text>

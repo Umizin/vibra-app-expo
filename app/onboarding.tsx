@@ -7,6 +7,7 @@ import { BotaoPrimario } from '@/components/BotaoPrimario';
 import { Genero, generos } from '@/constants/generos';
 import { usePreferencias } from '@/contexts/PreferenciasContext';
 import { useTema } from '@/contexts/TemaContext';
+import { voltarOuIrPara } from '@/utils/navegacao';
 
 export default function TelaDeOnboarding() {
   const { cores } = useTema();
@@ -26,7 +27,7 @@ export default function TelaDeOnboarding() {
   async function concluir(escolha: Genero[]) {
     setSalvando(true);
     await salvarGeneros(escolha);
-    if (editar) router.back();
+    if (editar) voltarOuIrPara(router, '/(tabs)/perfil');
     else router.replace('/(tabs)');
   }
 

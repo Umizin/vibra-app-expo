@@ -9,6 +9,7 @@ import { usePlayer } from '@/contexts/PlayerContext';
 import { useTema } from '@/contexts/TemaContext';
 import { useRequisicao } from '@/hooks/useRequisicao';
 import { catalogoService } from '@/services/catalogoService';
+import { voltarOuIrPara } from '@/utils/navegacao';
 
 export default function TelaDeAlbum() {
   const { id = '' } = useLocalSearchParams<{ id: string }>();
@@ -21,7 +22,7 @@ export default function TelaDeAlbum() {
 
   return (
     <ScrollView style={{ backgroundColor: cores.fundo }} contentContainerStyle={[estilos.container, { paddingTop: insets.top + 12 }]}>
-      <Text onPress={() => router.back()} style={[estilos.voltar, { color: cores.destaque }]}>‹ Voltar</Text>
+      <Text onPress={() => voltarOuIrPara(router, '/(tabs)')} style={[estilos.voltar, { color: cores.destaque }]}>‹ Voltar</Text>
       {album.carregando ? <ActivityIndicator color={cores.destaque} /> : album.erro ? (
         <Text style={[estilos.estado, { color: cores.perigo }]}>{album.erro}</Text>
       ) : album.dado ? (

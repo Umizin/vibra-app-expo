@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinhaDeFaixa } from '@/components/LinhaDeFaixa';
 import { usePlayer } from '@/contexts/PlayerContext';
 import { useTema } from '@/contexts/TemaContext';
+import { voltarOuIrPara } from '@/utils/navegacao';
 
 export default function TelaDaFila() {
   const { cores } = useTema();
@@ -19,7 +20,7 @@ export default function TelaDaFila() {
   return (
     <View style={[estilos.container, { backgroundColor: cores.fundo, paddingTop: insets.top + 12 }]}>
       <View style={estilos.cabecalho}>
-        <Pressable onPress={() => router.back()} hitSlop={12}>
+        <Pressable onPress={() => voltarOuIrPara(router, '/(tabs)')} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={cores.texto} />
         </Pressable>
         <Text style={[estilos.titulo, { color: cores.texto }]}>Fila</Text>
@@ -33,7 +34,7 @@ export default function TelaDaFila() {
           faixaAtual ? (
             <View style={estilos.secao}>
               <Text style={[estilos.rotulo, { color: cores.destaque }]}>Tocando agora</Text>
-              <LinhaDeFaixa faixa={faixaAtual} aoPressionar={() => router.back()} />
+              <LinhaDeFaixa faixa={faixaAtual} aoPressionar={() => voltarOuIrPara(router, '/player')} />
               <Text style={[estilos.rotulo, { color: cores.textoSecundario, marginTop: 24 }]}>A seguir</Text>
             </View>
           ) : undefined

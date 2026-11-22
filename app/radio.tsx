@@ -10,6 +10,7 @@ import { corSobreHumor, Humor, humores } from '@/constants/humores';
 import { usePlayer } from '@/contexts/PlayerContext';
 import { catalogoService } from '@/services/catalogoService';
 import { embaralhar } from '@/utils/embaralhar';
+import { voltarOuIrPara } from '@/utils/navegacao';
 
 export default function TelaDoRadio() {
   const insets = useSafeAreaInsets();
@@ -39,7 +40,7 @@ export default function TelaDoRadio() {
 
   return (
     <LinearGradient colors={humor.cores} style={[estilos.container, { paddingTop: insets.top + 12 }]}>
-      <Pressable onPress={() => router.back()} hitSlop={12}>
+      <Pressable onPress={() => voltarOuIrPara(router, '/(tabs)')} hitSlop={12}>
         <Ionicons name="chevron-back" size={26} color={corSobreHumor} />
       </Pressable>
 

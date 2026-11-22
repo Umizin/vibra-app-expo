@@ -23,6 +23,7 @@ import { ApiClientError } from '@/services/api';
 import { catalogoService, type PaginaCatalogo } from '@/services/catalogoService';
 import type { Faixa } from '@/types/modelos';
 import { formatarDuracao } from '@/utils/formatarDuracao';
+import { voltarOuIrPara } from '@/utils/navegacao';
 
 export default function TelaDeDetalheDaPlaylist() {
   const params = useLocalSearchParams<{ id: string | string[] }>();
@@ -156,7 +157,7 @@ export default function TelaDeDetalheDaPlaylist() {
         >
           <Text style={[estilos.link, { color: cores.destaque }]}>Tentar novamente</Text>
         </Pressable>
-        <Pressable onPress={() => router.back()} style={estilos.tentarNovamente}>
+        <Pressable onPress={() => voltarOuIrPara(router, '/(tabs)/biblioteca')} style={estilos.tentarNovamente}>
           <Text style={[estilos.link, { color: cores.textoSecundario }]}>Voltar</Text>
         </Pressable>
       </View>
@@ -174,7 +175,7 @@ export default function TelaDeDetalheDaPlaylist() {
         ListHeaderComponent={(
           <>
             <LinearGradient colors={[cores.destaque, cores.fundo]} style={estilos.cabecalho}>
-              <Pressable onPress={() => router.back()} style={[estilos.voltar, { top: insets.top + 8 }]} hitSlop={12}>
+              <Pressable onPress={() => voltarOuIrPara(router, '/(tabs)/biblioteca')} style={[estilos.voltar, { top: insets.top + 8 }]} hitSlop={12}>
                 <Ionicons name="chevron-back" size={26} color="#FFFFFF" />
               </Pressable>
               <View style={[estilos.capaPlaylist, { backgroundColor: cores.superficieElevada }]}>
